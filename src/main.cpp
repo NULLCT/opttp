@@ -399,17 +399,20 @@ void byGreedy(const int64_t V, const int64_t E, DirectedGraph &G, const int64_t 
       assert(mode != -1);
       */
 
+      if(carriers[num].passengers.size() == 0)
+        continue;
+
       int next = -1; // nextに遷移する
       {
-        vector<int64_t> cnts(V, 0);
-        for (auto &i : G.g[carriers[num].pos]) {
-          cnts[DIST[carriers[num].pos][i.to]]++;
+        vector<int64_t> cnts(V, 0); // とりあえず頂点iに行きたい荷物の数
+        for (auto &i : carriers[num].passengers) {
+          cnts[NEXT[carriers[num].pos][i]]++;
         }
+        cout<<"cnts: "<<cnts<<"\n";
         next = max_element(cnts.begin(), cnts.end()) - cnts.begin();
       }
       cout << "next: " << next << "\n";
       que.insert({t+DIST[carriers[num].pos][next],num});
-      assert(carriers[num].pos != 1);
       carriers[num].pos = next;
 
       //どちらに進むのか決定する(TODO: グラフが一整列している場合のみ)
