@@ -185,6 +185,23 @@ istream &operator>>(istream &_istr, pair<T, Y> &_v) {
   return _istr;
 }
 
+template <class T>
+bool chmax(T &a, const T &b) {
+  if (a < b) {
+    a = b;
+    return true;
+  }
+  return false;
+}
+template <class T>
+bool chmin(T &a, const T &b) {
+  if (a > b) {
+    a = b;
+    return true;
+  }
+  return false;
+}
+
 class DirectedGraph {
 public:
   struct Edge {
@@ -200,19 +217,24 @@ public:
     g[s].push_back(e);
   }
   // O(V^3)
-  vector<vector<int64_t>> warshallfloyd() {
-    vector<vector<int64_t>> d(n, vector<int64_t>(n, LLONG_MAX));
+  pair<vector<vector<int64_t>>, vector<vector<int64_t>>> warshallfloyd() {
+    vector<vector<int64_t>> DIST(n, vector<int64_t>(n, LLONG_MAX));
+    vector<vector<int64_t>> NEXT(n, vector<int64_t>(n, LLONG_MAX));
     for (int64_t i = 0; i < n; i++)
-      d[i][i] = 0;
-    for (int64_t i = 0; i < n; i++)
-      for (Edge &j : g[i])
-        d[i][j.to] = min(d[i][j.to], j.cost);
+      DIST[i][i] = 0;
     for (int64_t i = 0; i < n; i++)
       for (int64_t j = 0; j < n; j++)
-        for (int64_t k = 0; k < n; k++)
-          if (d[j][i] != LLONG_MAX and d[i][k] != LLONG_MAX)
-            d[j][k] = min(d[j][k], d[j][i] + d[i][k]);
-    return d;
+        NEXT[i][j] = j;
+    for (int64_t i = 0; i < n; i++)
+      for (Edge &j : g[i])
+        chmin(DIST[i][j.to], j.cost);
+    for (int64_t k = 0; k < n; k++)
+      for (int64_t i = 0; i < n; i++)
+        for (int64_t j = 0; j < n; j++)
+          if (DIST[i][k] != LLONG_MAX and DIST[k][j] != LLONG_MAX)
+            if (chmin(DIST[i][j], DIST[i][k] + DIST[k][j]))
+              NEXT[i][j] = NEXT[i][k];
+    return {DIST, NEXT};
   }
   // O(E+VlogV)
   vector<int64_t> dijkstra(int64_t s) {
@@ -302,27 +324,20 @@ void putLogo() {
   cout << "----------------------------\n";
 }
 
-void checkArgs(const int64_t V, const int64_t E, const DirectedGraph &G, const int64_t T, const vector<int64_t> &M, const int64_t N, const vector<pair<int64_t, int64_t>> &Q, const vector<vector<int64_t>> &DIST) {
-  cout << "checkArgs:"
-       << "\n";
+void checkArgs(const int64_t V, const int64_t E, const DirectedGraph &G, const int64_t T, const vector<int64_t> &M, const int64_t N, const vector<pair<int64_t, int64_t>> &Q, const vector<vector<int64_t>> &DIST, const vector<vector<int64_t>> &NEXT) {
   cout << "G = (" << V << ", " << E << ")\n";
-  cout << "最大シミュレート時間T: " << T << "\n";
   cout << "頂点間距離:\n";
-  for (auto &i : DIST) {
-    for (auto &j : i) {
-      if (j == LLONG_MAX) {
-        cout << "x ";
-      } else {
-        cout << j << " ";
-      }
-    }
-    cout << "\n";
-  }
+  for (auto &i : DIST)
+    cout << i << "\n";
+  cout << "全点対最短経路:\n";
+  for (auto &i : NEXT)
+    cout << i << "\n";
+  cout << "最大シミュレート時間T: " << T << "\n";
   cout << "運送者M: " << M << "\n";
   cout << "クエリ数N: " << N << "\n";
   for (auto &i : Q)
     cout << i << "\n";
-  cout << "頂点: "
+  cout << "頂点出次: "
        << "\n";
   for (auto &i : G.g) {
     for (auto &j : i) {
@@ -341,26 +356,26 @@ public:
   Carrier(int _pos) : pos(_pos) {}
 };
 
-void byGreedy(const int64_t V, const int64_t E, const DirectedGraph &G, const int64_t T, const vector<int64_t> &M, const int64_t N, const vector<pair<int64_t, int64_t>> &Q, const vector<vector<int64_t>> &DIST) {
+void byGreedy(const int64_t V, const int64_t E, DirectedGraph &G, const int64_t T, const vector<int64_t> &M, const int64_t N, const vector<pair<int64_t, int64_t>> &Q, const vector<vector<int64_t>> &DIST, const vector<vector<int64_t>> &NEXT) {
   vector<Carrier> carriers; // 運送者たち id:i
   for (size_t i = 0; i < M.size(); i++)
     for (int64_t j = 0; j < M[i]; j++)
-      carriers.emplace_back(Carrier(i));
+      carriers.emplace_back(Carrier(i)); // 運送者情報をcarriersに詰める
 
   vector<unordered_multiset<int64_t>> m(V); // 配達するもの(頂点m[i]に行きたい)
   for (auto &[x, y] : Q)                    // 頂点xからyに行きたい
-    m[x].insert(y);
+    m[x].insert(y);                         // 運送物登録
 
   set<pair<int64_t, int64_t>> que; // pair<時間, 運送者番号>
   for (size_t i = 0; i < carriers.size(); i++)
-    que.insert({0, i});
+    que.insert({0, i}); // queは運送者がいつ空いてるかを管理する setなので時間が先な方が優先
 
   int t = 0; // 現在シュミレート時間
   cout << "que: " << que << "\n";
   while (not que.empty()) {
     if ((*que.begin()).first == t) {
       int64_t num = que.begin()->second; // 運送者番号 -> num
-      que.erase(que.begin());
+      que.erase(que.begin());            // queの上から一つとる
 
       cout << "pos: " << carriers[num].pos << "\n";
 
@@ -373,8 +388,33 @@ void byGreedy(const int64_t V, const int64_t E, const DirectedGraph &G, const in
         carriers[num].passengers.insert(passenger);
       m[carriers[num].pos].clear();
 
+      /*
+      int mode = -1; // modeに遷移する
+      {              // 最頻値を取得し、最頻の頂点番号をmodeに
+        vector<int64_t> cnts(V, 0);
+        for (auto &i : G.g[carriers[num].pos])
+          cnts[i.to]++;
+        mode = max_element(cnts.begin(), cnts.end()) - cnts.begin();
+      }
+      assert(mode != -1);
+      */
+
+      int next = -1; // nextに遷移する
+      {
+        vector<int64_t> cnts(V, 0);
+        for (auto &i : G.g[carriers[num].pos]) {
+          cnts[DIST[carriers[num].pos][i.to]]++;
+        }
+        next = max_element(cnts.begin(), cnts.end()) - cnts.begin();
+      }
+      cout << "next: " << next << "\n";
+      que.insert({t+DIST[carriers[num].pos][next],num});
+      assert(carriers[num].pos != 1);
+      carriers[num].pos = next;
+
       //どちらに進むのか決定する(TODO: グラフが一整列している場合のみ)
       //出次数は高々二つなので、いちいち探索を行わない
+      /*
       int back = 0;  //後ろに下がると良い乗客の数
       int front = 0; //前に進む良い乗客の数
 
@@ -396,8 +436,10 @@ void byGreedy(const int64_t V, const int64_t E, const DirectedGraph &G, const in
       }
       cout << flush;
       cout << carriers[num].pos << "\n";
+      */
+
     } else {
-      t = (*que.begin()).first;
+      t = (*que.begin()).first; // 時刻tを追従させる
     }
   }
 }
@@ -421,9 +463,9 @@ int main() {
   cin >> N;
   vector<pair<int64_t, int64_t>> Q(N);
   cin >> Q;
-  const vector<vector<int64_t>> DIST = G.warshallfloyd();
+  const auto [DIST, NEXT] = G.warshallfloyd();
 
   putLogo();
-  checkArgs(V, E, G, T, M, N, Q, DIST);
-  byGreedy(V, E, G, T, M, N, Q, DIST);
+  checkArgs(V, E, G, T, M, N, Q, DIST, NEXT);
+  byGreedy(V, E, G, T, M, N, Q, DIST,NEXT);
 }
