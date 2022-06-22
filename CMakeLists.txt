@@ -3,7 +3,7 @@ project(opttp CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 if(UNIX)
-  set(CMAKE_CXX_FLAGS "-Wall -Wextra -fsanitize=undefined,address,memory -g")
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -fsanitize=undefined,address -g")
 endif(UNIX)
 if(APPLE)
   set(CMAKE_CXX_FLAGS "-Wall -Wextra -fsanitize=undefined,address -g")
