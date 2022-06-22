@@ -374,6 +374,7 @@ void byGreedy(const int64_t V, const int64_t E, DirectedGraph &G, const int64_t 
   cout << "que: " << que << "\n";
   while (not que.empty()) {
     if ((*que.begin()).first == t) {
+      cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
       int64_t num = que.begin()->second; // 運送者番号 -> num
       que.erase(que.begin());            // queの上から一つとる
 
@@ -388,59 +389,40 @@ void byGreedy(const int64_t V, const int64_t E, DirectedGraph &G, const int64_t 
         carriers[num].passengers.insert(passenger);
       m[carriers[num].pos].clear();
 
-      /*
-      int mode = -1; // modeに遷移する
-      {              // 最頻値を取得し、最頻の頂点番号をmodeに
-        vector<int64_t> cnts(V, 0);
-        for (auto &i : G.g[carriers[num].pos])
-          cnts[i.to]++;
-        mode = max_element(cnts.begin(), cnts.end()) - cnts.begin();
-      }
-      assert(mode != -1);
-      */
+      if (carriers[num].passengers.size() == 0) { // 荷物を載せていなかった場合
+        cout << "no passenger detected\n";
+        cout << "m: ";
+        for (auto &i : m)
+          cout << i.size() << " ";
+        cout << "\n";
+        int next = 0;
+        for (int i = 0; i < V; i++)
+          if (m[next].size() < m[i].size())
+            next = i;
 
-      if(carriers[num].passengers.size() == 0)
-        continue;
-
-      int next = -1; // nextに遷移する
-      {
-        vector<int64_t> cnts(V, 0); // とりあえず頂点iに行きたい荷物の数
-        for (auto &i : carriers[num].passengers) {
-          cnts[NEXT[carriers[num].pos][i]]++;
+        if (m[next].size() == 0) {
+          cout << "no job detected\n";
+          continue;
         }
-        cout<<"cnts: "<<cnts<<"\n";
-        next = max_element(cnts.begin(), cnts.end()) - cnts.begin();
+        next = NEXT[carriers[num].pos][next];
+        cout << "next: " << next << "\n";
+        que.insert({t + DIST[carriers[num].pos][next], num});
+        carriers[num].pos = next;
+      } else { // 荷物を載せていた場合
+        cout << "passenger detected\n";
+        int next = -1; // nextに遷移する
+        {
+          vector<int64_t> cnts(V, 0); // とりあえず頂点iに行きたい荷物の数
+          for (auto &i : carriers[num].passengers)
+            if (DIST[carriers[num].pos][i] != LLONG_MAX)
+              cnts[NEXT[carriers[num].pos][i]]++;
+          cout << "cnts: " << cnts << "\n";
+          next = max_element(cnts.begin(), cnts.end()) - cnts.begin();
+        }
+        cout << "next: " << next << "\n";
+        que.insert({t + DIST[carriers[num].pos][next], num});
+        carriers[num].pos = next;
       }
-      cout << "next: " << next << "\n";
-      que.insert({t+DIST[carriers[num].pos][next],num});
-      carriers[num].pos = next;
-
-      //どちらに進むのか決定する(TODO: グラフが一整列している場合のみ)
-      //出次数は高々二つなので、いちいち探索を行わない
-      /*
-      int back = 0;  //後ろに下がると良い乗客の数
-      int front = 0; //前に進む良い乗客の数
-
-      cout << carriers[num].passengers << "\n";
-
-      for (auto &passenger : carriers[num].passengers) {
-        (carriers[num].pos < passenger ? front : back)++;
-      }
-      cout << back << " " << front << "\n";
-      if (back < front) {
-        que.insert({t + DIST[carriers[num].pos][carriers[num].pos + 1], num});
-        carriers[num].pos++;
-      } else if (back > front) {
-        que.insert({t + DIST[carriers[num].pos][carriers[num].pos - 1], num});
-        carriers[num].pos--;
-      } else {
-        cout << "dotti ittara iika wakaranaiyo~~\n";
-        exit(0);
-      }
-      cout << flush;
-      cout << carriers[num].pos << "\n";
-      */
-
     } else {
       t = (*que.begin()).first; // 時刻tを追従させる
     }
@@ -470,5 +452,5 @@ int main() {
 
   putLogo();
   checkArgs(V, E, G, T, M, N, Q, DIST, NEXT);
-  byGreedy(V, E, G, T, M, N, Q, DIST,NEXT);
+  byGreedy(V, E, G, T, M, N, Q, DIST, NEXT);
 }
