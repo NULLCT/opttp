@@ -1,48 +1,95 @@
-// https://gasin.hatenadiary.jp/entry/2019/09/03/162613
-#pragma once
-#include <vector>
+// https://jetbead.hatenablog.com/entry/20120623/1340419446
 #include <cmath>
-#include <tuple>
+#include <iostream>
 
 using namespace std;
 
-constexpr double START_TEMP = 100;
-constexpr double END_TEMP = 10;
-constexpr double START_TIME = 0;
-constexpr double TIME_LIMIT = 0;
-constexpr int INF = 0;
-
-struct STATE { // 状態
-  vector<vector<pair<int,int>>> transition; // transition[i][j]{t,p} はi番目の運送者が0..j..で時刻tに座標pに進むこと
+struct STATE {
+  double x;
 };
 
-void init(STATE &state) { // 初期化
-}
+//焼きなまし
+class SA {
+  STATE state;  // 現在の状態
+  STATE ans;    // 暫定最適状態
+  double score; // 暫定最適状態ansを評価関数に通したスコア
+  double T;     // 温度
+  const int R;        // 反復回数
 
-void modify(STATE &state) { // 状態遷移
-}
-
-int calc_score(STATE &state) { // 評価関数計算
-}
-
-void simulated_annealing() { // 焼きなまし法
-  STATE state;
-  init(state);
-  while (true) {
-    double now_time;
-    if (now_time - START_TIME > TIME_LIMIT)
-      break;
-
-    STATE new_state = state;
-    modify(new_state);
-    int new_score = calc_score(new_state);
-    int pre_score = calc_score(state);
-
-    double temp = START_TEMP + (END_TEMP - START_TEMP) * (now_time - START_TIME) / TIME_LIMIT;
-    double prob = exp((new_score - pre_score) / temp);
-
-    if(prob > (rand()%INF)/(double)INF) {
-      state = new_state;
-    }
+  unsigned long xor128() {
+    static unsigned long x = 123456789, y = 362436069, z = 521288629, w = 88675123;
+    unsigned long t;
+    t = (x ^ (x << 11));
+    x = y;
+    y = z;
+    z = w;
+    return w = (w ^ (w >> 19)) ^ (t ^ (t >> 8));
   }
+  double frand() {
+    return xor128() % ULONG_MAX / static_cast<double>(ULONG_MAX);
+  }
+
+  //評価関数
+  double calc_score(STATE &state) {
+    const double x = state.x;
+    return -x * x + x + 10;
+  }
+
+  //近傍からランダムに選ぶ
+  void modify(STATE &state) {
+    if (frand() < 0.5)
+      state.x += 0.01;
+    else
+      state.x -= 0.01;
+  }
+
+  //温度の更新
+  double next_T(double t) {
+    return t * 0.995;
+  }
+
+public:
+  SA(STATE &_state, double _t, int _r) : T(_t), R(_r) { // 温度の初期値、反復回数の初期値
+    state = _state;
+    ans = _state;
+    score = calc_score(ans);
+  }
+
+  //探索
+  STATE simulated_annealing() {
+    while (T > 1.0) { //十分冷えるまで
+      for (int i = 0; i < R; i++) {
+        // xの近傍からランダムに選ぶ
+        STATE new_state = state;
+        modify(new_state);
+        //変化量
+        double delta = calc_score(state) - calc_score(new_state);
+
+        if (delta < 0.0) { //よりよい解が見つかった場合
+          state = new_state;
+        } else if (exp(-delta / T) > frand()) { //ある程度の確率で探索を許す
+          state = new_state;
+        }
+
+        //最適解の更新
+        if (calc_score(state) > score) {
+          score = calc_score(state);
+          ans = state;
+        }
+      }
+
+      //温度の更新
+      T = next_T(T);
+    }
+
+    return ans;
+  }
+};
+
+int main() {
+  STATE state;
+  state.x = 2.0;
+  SA sa(state, 1000, 10000);
+
+  cout<<sa.simulated_annealing().x<<"\n";
 }
