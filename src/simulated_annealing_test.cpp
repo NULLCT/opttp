@@ -1,10 +1,13 @@
 // https://jetbead.hatenablog.com/entry/20120623/1340419446
+#include <climits>
 #include <cmath>
+#include <iomanip>
 #include <iostream>
+#include <random>
 
 using namespace std;
 
-struct STATE {
+struct STATE { // 状態構造体
   double x;
 };
 
@@ -14,25 +17,16 @@ class SA {
   STATE ans;    // 暫定最適状態
   double score; // 暫定最適状態ansを評価関数に通したスコア
   double T;     // 温度
-  const int R;        // 反復回数
+  const int R;  // 反復回数
 
-  unsigned long xor128() {
-    static unsigned long x = 123456789, y = 362436069, z = 521288629, w = 88675123;
-    unsigned long t;
-    t = (x ^ (x << 11));
-    x = y;
-    y = z;
-    z = w;
-    return w = (w ^ (w >> 19)) ^ (t ^ (t >> 8));
-  }
   double frand() {
-    return xor128() % ULONG_MAX / static_cast<double>(ULONG_MAX);
+    return ((double) rand() / (RAND_MAX));
   }
 
   //評価関数
   double calc_score(STATE &state) {
     const double x = state.x;
-    return -x * x + x + 10;
+    return -0.7*pow(x,4)+1.3*pow(x,3)+4*pow(x,2)-3.5*x+1.9;
   }
 
   //近傍からランダムに選ぶ
@@ -87,9 +81,10 @@ public:
 };
 
 int main() {
+  srand(0);
   STATE state;
-  state.x = 2.0;
-  SA sa(state, 1000, 10000);
+  state.x = -0.5;
+  SA sa(state, 1000, 1000);
 
-  cout<<sa.simulated_annealing().x<<"\n";
+  cout << sa.simulated_annealing().x << "\n";
 }
