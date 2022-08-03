@@ -356,11 +356,14 @@ public:
   Carrier(int _pos) : pos(_pos) {}
 };
 
-void byGreedy(const int64_t V, const int64_t E, DirectedGraph &G, const int64_t T, const vector<int64_t> &M, const int64_t N, const vector<pair<int64_t, int64_t>> &Q, const vector<vector<int64_t>> &DIST, const vector<vector<int64_t>> &NEXT) {
+vector<set<pair<int,int>>> byGreedy(const int64_t V, const int64_t E, DirectedGraph &G, const int64_t T, const vector<int64_t> &M, const int64_t N, const vector<pair<int64_t, int64_t>> &Q, const vector<vector<int64_t>> &DIST, const vector<vector<int64_t>> &NEXT) {
   vector<Carrier> carriers; // 運送者たち id:i
   for (size_t i = 0; i < M.size(); i++)
-    for (int64_t j = 0; j < M[i]; j++)
+    for (int64_t j = 0; j < M[i]; j++){
       carriers.emplace_back(Carrier(i)); // 運送者情報をcarriersに詰める
+    }
+
+  vector<set<pair<int,int>>> res(carriers.size()); // SA法用状態保持
 
   vector<unordered_multiset<int64_t>> m(V); // 配達するもの(頂点m[i]に行きたい)
   for (auto &[x, y] : Q)                    // 頂点xからyに行きたい
@@ -377,6 +380,7 @@ void byGreedy(const int64_t V, const int64_t E, DirectedGraph &G, const int64_t 
       cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
       int64_t num = que.begin()->second; // 運送者番号 -> num
       que.erase(que.begin());            // queの上から一つとる
+      res[num].insert({t,carriers[num].pos});
 
       cout << "pos: " << carriers[num].pos << "\n";
 
@@ -406,6 +410,10 @@ void byGreedy(const int64_t V, const int64_t E, DirectedGraph &G, const int64_t 
         }
         next = NEXT[carriers[num].pos][next];
         cout << "next: " << next << "\n";
+        if(DIST[carriers[num].pos][next] == LLONG_MAX){
+          cout<<"task end\n";
+          continue;
+        }
         que.insert({t + DIST[carriers[num].pos][next], num});
         carriers[num].pos = next;
       } else { // 荷物を載せていた場合
@@ -420,6 +428,10 @@ void byGreedy(const int64_t V, const int64_t E, DirectedGraph &G, const int64_t 
           next = max_element(cnts.begin(), cnts.end()) - cnts.begin();
         }
         cout << "next: " << next << "\n";
+        if(DIST[carriers[num].pos][next] == LLONG_MAX){
+          cout<<"task end\n";
+          continue;
+        }
         que.insert({t + DIST[carriers[num].pos][next], num});
         carriers[num].pos = next;
       }
@@ -427,6 +439,8 @@ void byGreedy(const int64_t V, const int64_t E, DirectedGraph &G, const int64_t 
       t = (*que.begin()).first; // 時刻tを追従させる
     }
   }
+
+  return res;
 }
 
 int main() {
@@ -452,5 +466,8 @@ int main() {
 
   putLogo();
   checkArgs(V, E, G, T, M, N, Q, DIST, NEXT);
-  byGreedy(V, E, G, T, M, N, Q, DIST, NEXT);
+  auto res = byGreedy(V, E, G, T, M, N, Q, DIST, NEXT);
+  for(int i=0;i<res.size();i++){
+    cout<<"#"<<i<<": "<<res[i]<<"\n";
+  }
 }

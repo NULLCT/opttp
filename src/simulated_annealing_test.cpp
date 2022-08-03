@@ -86,5 +86,6 @@ int main() {
   state.x = -0.5;
   SA sa(state, 1000, 1000);
 
+  cout<<fixed<<setprecision(32);
   cout << sa.simulated_annealing().x << "\n";
 }
