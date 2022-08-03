@@ -210,7 +210,6 @@ public:
   int64_t n;
   vector<vector<Edge>> g;
 
-  DirectedGraph(int64_t _n) : g(_n) { n = _n; }
   void add(int64_t s, int64_t t, int64_t cost) {
     Edge e;
     e.to = t, e.cost = cost;
@@ -324,22 +323,34 @@ void putLogo() {
   cout << "----------------------------\n";
 }
 
-void checkArgs(const int64_t V, const int64_t E, const DirectedGraph &G, const int64_t T, const vector<int64_t> &M, const int64_t N, const vector<pair<int64_t, int64_t>> &Q, const vector<vector<int64_t>> &DIST, const vector<vector<int64_t>> &NEXT) {
-  cout << "G = (" << V << ", " << E << ")\n";
-  cout << "頂点間距離:\n";
-  for (auto &i : DIST)
+struct MODEL {                      // 運送モデル
+  int64_t V;                        // 頂点数
+  int64_t E;                        // 辺の数
+  DirectedGraph G;                  // グラフ
+  int64_t T;                        // 最大シミュレート時間
+  vector<int64_t> M;                // 頂点ごとの運送数
+  int64_t N;                        // クエリ数
+  vector<pair<int64_t, int64_t>> Q; // クエリ
+  vector<vector<int64_t>> DIST;     // 頂点間距離
+  vector<vector<int64_t>> NEXT;     // ある頂点に行くため次どこに行けばいいか
+};
+
+void checkArgs(const MODEL &model) {
+  cout << "G = (" << model.V << ", " << model.E << ")\n";
+  cout << "頂点間距離(dist):\n";
+  for (auto &i : model.DIST)
     cout << i << "\n";
-  cout << "全点対最短経路:\n";
-  for (auto &i : NEXT)
+  cout << "全点対最短経路(index):\n";
+  for (auto &i : model.NEXT)
     cout << i << "\n";
-  cout << "最大シミュレート時間T: " << T << "\n";
-  cout << "運送者M: " << M << "\n";
-  cout << "クエリ数N: " << N << "\n";
-  for (auto &i : Q)
+  cout << "最大シミュレート時間T: " << model.T << "\n";
+  cout << "運送者M: " << model.M << "\n";
+  cout << "クエリ数N: " << model.N << "\n";
+  for (auto &i : model.Q)
     cout << i << "\n";
   cout << "頂点出次: "
        << "\n";
-  for (auto &i : G.g) {
+  for (auto &i : model.G.g) {
     for (auto &j : i) {
       cout << j.to << " ";
     }
@@ -356,31 +367,30 @@ public:
   Carrier(int _pos) : pos(_pos) {}
 };
 
-vector<set<pair<int,int>>> byGreedy(const int64_t V, const int64_t E, DirectedGraph &G, const int64_t T, const vector<int64_t> &M, const int64_t N, const vector<pair<int64_t, int64_t>> &Q, const vector<vector<int64_t>> &DIST, const vector<vector<int64_t>> &NEXT) {
+vector<set<pair<int, int>>> byGreedy(const MODEL &model) {
   vector<Carrier> carriers; // 運送者たち id:i
-  for (size_t i = 0; i < M.size(); i++)
-    for (int64_t j = 0; j < M[i]; j++){
+  for (size_t i = 0; i < model.M.size(); i++)
+    for (int64_t j = 0; j < model.M[i]; j++)
       carriers.emplace_back(Carrier(i)); // 運送者情報をcarriersに詰める
-    }
 
-  vector<set<pair<int,int>>> res(carriers.size()); // SA法用状態保持
+  vector<set<pair<int, int>>> res(carriers.size()); // SA法用状態保持
 
-  vector<unordered_multiset<int64_t>> m(V); // 配達するもの(頂点m[i]に行きたい)
-  for (auto &[x, y] : Q)                    // 頂点xからyに行きたい
+  vector<unordered_multiset<int64_t>> m(model.V); // 配達するもの(頂点m[i]に行きたい)
+  for (auto &[x, y] : model.Q)                    // 頂点xからyに行きたい
     m[x].insert(y);                         // 運送物登録
 
   set<pair<int64_t, int64_t>> que; // pair<時間, 運送者番号>
   for (size_t i = 0; i < carriers.size(); i++)
     que.insert({0, i}); // queは運送者がいつ空いてるかを管理する setなので時間が先な方が優先
 
-  int t = 0; // 現在シュミレート時間
+  int t = 0; // 現在シミュレート時間
   cout << "que: " << que << "\n";
   while (not que.empty()) {
     if ((*que.begin()).first == t) {
       cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
       int64_t num = que.begin()->second; // 運送者番号 -> num
       que.erase(que.begin());            // queの上から一つとる
-      res[num].insert({t,carriers[num].pos});
+      res[num].insert({t, carriers[num].pos});
 
       cout << "pos: " << carriers[num].pos << "\n";
 
@@ -400,7 +410,7 @@ vector<set<pair<int,int>>> byGreedy(const int64_t V, const int64_t E, DirectedGr
           cout << i.size() << " ";
         cout << "\n";
         int next = 0;
-        for (int i = 0; i < V; i++)
+        for (int i = 0; i < model.V; i++)
           if (m[next].size() < m[i].size())
             next = i;
 
@@ -408,31 +418,31 @@ vector<set<pair<int,int>>> byGreedy(const int64_t V, const int64_t E, DirectedGr
           cout << "no job detected\n";
           continue;
         }
-        next = NEXT[carriers[num].pos][next];
+        next = model.NEXT[carriers[num].pos][next];
         cout << "next: " << next << "\n";
-        if(DIST[carriers[num].pos][next] == LLONG_MAX){
-          cout<<"task end\n";
+        if (model.DIST[carriers[num].pos][next] == LLONG_MAX) {
+          cout << "task end\n";
           continue;
         }
-        que.insert({t + DIST[carriers[num].pos][next], num});
+        que.insert({t + model.DIST[carriers[num].pos][next], num});
         carriers[num].pos = next;
       } else { // 荷物を載せていた場合
         cout << "passenger detected\n";
         int next = -1; // nextに遷移する
         {
-          vector<int64_t> cnts(V, 0); // とりあえず頂点iに行きたい荷物の数
+          vector<int64_t> cnts(model.V, 0); // とりあえず頂点iに行きたい荷物の数
           for (auto &i : carriers[num].passengers)
-            if (DIST[carriers[num].pos][i] != LLONG_MAX)
-              cnts[NEXT[carriers[num].pos][i]]++;
+            if (model.DIST[carriers[num].pos][i] != LLONG_MAX)
+              cnts[model.NEXT[carriers[num].pos][i]]++;
           cout << "cnts: " << cnts << "\n";
           next = max_element(cnts.begin(), cnts.end()) - cnts.begin();
         }
         cout << "next: " << next << "\n";
-        if(DIST[carriers[num].pos][next] == LLONG_MAX){
-          cout<<"task end\n";
+        if (model.DIST[carriers[num].pos][next] == LLONG_MAX) {
+          cout << "task end\n";
           continue;
         }
-        que.insert({t + DIST[carriers[num].pos][next], num});
+        que.insert({t + model.DIST[carriers[num].pos][next], num});
         carriers[num].pos = next;
       }
     } else {
@@ -443,31 +453,114 @@ vector<set<pair<int,int>>> byGreedy(const int64_t V, const int64_t E, DirectedGr
   return res;
 }
 
+// https://jetbead.hatenablog.com/entry/20120623/1340419446
+struct STATE { // 状態構造体
+  vector<set<pair<int, int>>> x;
+};
+
+//焼きなまし
+class SA {
+  STATE state;  // 現在の状態
+  STATE ans;    // 暫定最適状態
+  double score; // 暫定最適状態ansを評価関数に通したスコア
+  double t;     // 温度
+  const int R;  // 反復回数
+
+  double frand() {
+    return ((double)rand() / (RAND_MAX));
+  }
+
+  //評価関数
+  double calc_score(STATE &state) {
+  }
+
+  //近傍からランダムに選ぶ
+  void modify(STATE &state) {
+    if (frand() < 0.5) {
+    }
+  }
+
+  //温度の更新
+  double next_T(double t) {
+    return t * 0.995;
+  }
+
+public:
+  SA(STATE &_state, double _t, int _r) : t(_t), R(_r) { // 温度の初期値、反復回数の初期値
+    state = _state;
+    ans = _state;
+    score = calc_score(ans);
+  }
+
+  //探索
+  STATE simulated_annealing() {
+    while (t > 1.0) { //十分冷えるまで
+      for (int i = 0; i < R; i++) {
+        // xの近傍からランダムに選ぶ
+        STATE new_state = state;
+        modify(new_state);
+        //変化量
+        double delta = calc_score(state) - calc_score(new_state);
+
+        if (delta < 0.0) { //よりよい解が見つかった場合
+          state = new_state;
+        } else if (exp(-delta / t) > frand()) { //ある程度の確率で探索を許す
+          state = new_state;
+        }
+
+        //最適解の更新
+        if (calc_score(state) > score) {
+          score = calc_score(state);
+          ans = state;
+        }
+      }
+
+      //温度の更新
+      t = next_T(t);
+    }
+
+    return ans;
+  }
+};
+
 int main() {
-  int64_t V; // 頂点数
-  cin >> V;
-  int64_t E; // 辺の数
-  cin >> E;
-  DirectedGraph G(V); // 有向重み付きグラフ
-  for (int64_t i = 0; i < E; i++) {
+  MODEL model;
+  cin >> model.V;
+  cin >> model.E;
+  model.G.n = model.V;
+  model.G.g.resize(model.V);
+  for (int64_t i = 0; i < model.E; i++) {
     int64_t a, b, d;
     cin >> a >> b >> d;
-    G.add(a, b, d);
+    model.G.add(a, b, d);
   }
-  int64_t T; // 最大シミュレート時間
-  cin >> T;
-  vector<int64_t> M(V); // 頂点ごとの運送者数
-  cin >> M;
-  int64_t N; // クエリ数
-  cin >> N;
-  vector<pair<int64_t, int64_t>> Q(N);
-  cin >> Q;
-  const auto [DIST, NEXT] = G.warshallfloyd();
+  cin >> model.T;
+  model.M.resize(model.V);
+  cin >> model.M;
+  cin >> model.N;
+  model.Q.resize(model.N);
+  cin >> model.Q;
+  model.DIST = model.G.warshallfloyd().first;
+  model.NEXT = model.G.warshallfloyd().second;
 
   putLogo();
-  checkArgs(V, E, G, T, M, N, Q, DIST, NEXT);
-  auto res = byGreedy(V, E, G, T, M, N, Q, DIST, NEXT);
-  for(int i=0;i<res.size();i++){
-    cout<<"#"<<i<<": "<<res[i]<<"\n";
+  checkArgs(model);
+  auto res = byGreedy(model);
+  cout << "res:\n";
+  for (int i = 0; i < res.size(); i++) {
+    cout << "#" << i << ": " << res[i] << "\n";
   }
+  cout << "l = " << prev(res[0].end())->first << "\n";
+
+  cout << "-----------------------------\n";
+  cout << "Greedy part finished\n";
+  cout << "-----------------------------\n";
+
+  srand(0);
+  STATE state;
+  state.x = res;
+  SA sa(state, 1000, 1000);
+
+  cout << fixed << setprecision(32);
+  cout << sa.simulated_annealing().x << "\n";
 }
