@@ -377,7 +377,7 @@ vector<set<pair<int, int>>> byGreedy(const MODEL &model) {
 
   vector<unordered_multiset<int64_t>> m(model.V); // 配達するもの(頂点m[i]に行きたい)
   for (auto &[x, y] : model.Q)                    // 頂点xからyに行きたい
-    m[x].insert(y);                         // 運送物登録
+    m[x].insert(y);                               // 運送物登録
 
   set<pair<int64_t, int64_t>> que; // pair<時間, 運送者番号>
   for (size_t i = 0; i < carriers.size(); i++)
@@ -454,8 +454,8 @@ vector<set<pair<int, int>>> byGreedy(const MODEL &model) {
 }
 
 // https://jetbead.hatenablog.com/entry/20120623/1340419446
-struct STATE { // 状態構造体
-  vector<set<pair<int, int>>> x;
+struct STATE {                   // 状態構造体
+  vector<set<pair<int, int>>> x; // 番号 時刻 頂点
 };
 
 //焼きなまし
@@ -465,19 +465,69 @@ class SA {
   double score; // 暫定最適状態ansを評価関数に通したスコア
   double t;     // 温度
   const int R;  // 反復回数
+  MODEL model;  // モデル
 
   double frand() {
     return ((double)rand() / (RAND_MAX));
   }
 
   //評価関数
-  double calc_score(STATE &state) {
+  double calc_score(const STATE &state) {
+    double res = 0;
+    set<tuple<int, int, int>> que; // 時刻 番号 頂点
+    for (int i = 0; i < state.x.size(); i++)
+      for (auto &j : state.x[i])
+        que.insert({j.first, i, j.second});
+
+    vector<set<int64_t>> m(model.V); // 配達するもの(頂点m[i]に行きたい)
+    for (auto &[x, y] : model.Q)     // 頂点xからyに行きたい
+      m[x].insert(y);                // 運送物登録
+
+    vector<set<int64_t>> carring(state.x.size()); // 各運送者が何を保持しているか
+
+    for (auto &q : que) {
+      auto [t, n, v] = q; // 時刻 番号 頂点
+      for (auto &i : m[v])
+        carring[n].insert(i);
+      m[v].clear();
+
+      while (carring[n].find(v) != carring[n].end()) {
+        res -= t;
+        carring[n].erase(v);
+      }
+    }
+
+    return res;
   }
 
   //近傍からランダムに選ぶ
   void modify(STATE &state) {
-    if (frand() < 0.5) {
+    cout << "before : \n";
+    for (auto &i : state.x[0]) {
+      cout << i << "\n";
     }
+    int carriernum = (rand() % state.x.size());
+    int posnum = (rand() % state.x[carriernum].size());
+    auto ptr = next(state.x[carriernum].begin(), posnum); // t v
+    int outdnum = (rand() % model.G.g[ptr->second].size());
+
+    for (auto p = next(ptr);;) {
+      if (p != state.x[carriernum].end())
+        break;
+      auto mem = *p;
+      p++;
+      cout<<mem<<": updated\n";
+      state.x[carriernum].erase(prev(p));
+      state.x[carriernum].insert({mem.first + model.G.g[ptr->second][outdnum].cost * 2, mem.second});
+    }
+
+    state.x[carriernum].insert({ptr->first + model.G.g[ptr->second][outdnum].cost, model.G.g[ptr->second][outdnum].to});
+    state.x[carriernum].insert({ptr->first + (model.G.g[ptr->second][outdnum].cost * 2), ptr->second});
+    cout << "after: \n";
+    for (auto &i : state.x[0]) {
+      cout << i << "\n";
+    }
+    exit(0);
   }
 
   //温度の更新
@@ -486,7 +536,7 @@ class SA {
   }
 
 public:
-  SA(STATE &_state, double _t, int _r) : t(_t), R(_r) { // 温度の初期値、反復回数の初期値
+  SA(STATE &_state, double _t, int _r, MODEL &_model) : t(_t), R(_r), model(_model) { // 温度の初期値、反復回数の初期値
     state = _state;
     ans = _state;
     score = calc_score(ans);
@@ -556,10 +606,10 @@ int main() {
   cout << "Greedy part finished\n";
   cout << "-----------------------------\n";
 
-  srand(0);
+  srand(time(NULL));
   STATE state;
   state.x = res;
-  SA sa(state, 1000, 1000);
+  SA sa(state, 1000, 1000, model);
 
   cout << fixed << setprecision(32);
   cout << sa.simulated_annealing().x << "\n";
