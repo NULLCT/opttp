@@ -367,13 +367,21 @@ public:
   Carrier(int _pos) : pos(_pos) {}
 };
 
-vector<set<pair<int, int>>> byGreedy(const MODEL &model) {
+// https://jetbead.hatenablog.com/entry/20120623/1340419446
+struct STATE {           // 状態構造体
+  vector<vector<int>> x; // 頂点移動履歴
+  vector<int> l;         // パス長
+};
+
+STATE byGreedy(const MODEL &model) {
   vector<Carrier> carriers; // 運送者たち id:i
   for (size_t i = 0; i < model.M.size(); i++)
     for (int64_t j = 0; j < model.M[i]; j++)
       carriers.emplace_back(Carrier(i)); // 運送者情報をcarriersに詰める
 
-  vector<set<pair<int, int>>> res(carriers.size()); // SA法用状態保持
+  STATE res; // SA法用状態保持
+  res.x.resize(carriers.size());
+  res.l.resize(carriers.size());
 
   vector<unordered_multiset<int64_t>> m(model.V); // 配達するもの(頂点m[i]に行きたい)
   for (auto &[x, y] : model.Q)                    // 頂点xからyに行きたい
@@ -390,7 +398,7 @@ vector<set<pair<int, int>>> byGreedy(const MODEL &model) {
       cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
       int64_t num = que.begin()->second; // 運送者番号 -> num
       que.erase(que.begin());            // queの上から一つとる
-      res[num].insert({t, carriers[num].pos});
+      res.x[num].push_back(carriers[num].pos);
 
       cout << "pos: " << carriers[num].pos << "\n";
 
@@ -450,13 +458,15 @@ vector<set<pair<int, int>>> byGreedy(const MODEL &model) {
     }
   }
 
+  for (int i = 0; i < res.x.size(); i++) {
+    int sum = 0;
+    for (int j = 0; j < res.x[i].size() - 1; j++)
+      sum += model.DIST[res.x[i][j]][res.x[i][j + 1]];
+    res.l[i] = sum;
+  }
+
   return res;
 }
-
-// https://jetbead.hatenablog.com/entry/20120623/1340419446
-struct STATE {                   // 状態構造体
-  vector<set<pair<int, int>>> x; // 番号 時刻 頂点
-};
 
 //焼きなまし
 class SA {
@@ -473,11 +483,16 @@ class SA {
 
   //評価関数
   double calc_score(const STATE &state) {
-    double res = 0;
+    double res = -10;
     set<tuple<int, int, int>> que; // 時刻 番号 頂点
-    for (int i = 0; i < state.x.size(); i++)
-      for (auto &j : state.x[i])
-        que.insert({j.first, i, j.second});
+    for (int i = 0; i < state.x.size(); i++) {
+      int time = 0;
+      for (int j = 0; j < state.x[i].size(); j++) {
+        que.insert({time, i, state.x[i][j]});
+        if (j + 1 != state.x[i].size())
+          time += model.DIST[state.x[i][j]][state.x[i][j + 1]];
+      }
+    }
 
     vector<set<int64_t>> m(model.V); // 配達するもの(頂点m[i]に行きたい)
     for (auto &[x, y] : model.Q)     // 頂点xからyに行きたい
@@ -492,42 +507,29 @@ class SA {
       m[v].clear();
 
       while (carring[n].find(v) != carring[n].end()) {
-        res -= t;
+        res += model.T - t;
         carring[n].erase(v);
       }
     }
-
     return res;
   }
 
   //近傍からランダムに選ぶ
   void modify(STATE &state) {
-    cout << "before : \n";
-    for (auto &i : state.x[0]) {
-      cout << i << "\n";
-    }
-    int carriernum = (rand() % state.x.size());
-    int posnum = (rand() % state.x[carriernum].size());
-    auto ptr = next(state.x[carriernum].begin(), posnum); // t v
-    int outdnum = (rand() % model.G.g[ptr->second].size());
+    int carriernum = (rand() % state.x.size());                             // 何番目の運送者か
+    int posnum = (rand() % state.x[carriernum].size());                     // 運送経路履歴の何番目頂点を選ぶか
+    int outdnum = (rand() % model.G.g[state.x[carriernum][posnum]].size()); // 何本目の辺を選ぶか
+    int pos = state.x[carriernum][posnum];                                  // 運送者がいる頂点番号
 
-    for (auto p = next(ptr);;) {
-      if (p != state.x[carriernum].end())
-        break;
-      auto mem = *p;
-      p++;
-      cout<<mem<<": updated\n";
-      state.x[carriernum].erase(prev(p));
-      state.x[carriernum].insert({mem.first + model.G.g[ptr->second][outdnum].cost * 2, mem.second});
-    }
+    state.x[carriernum].insert(state.x[carriernum].begin() + posnum + 1, model.G.g[pos][outdnum].to);
+    state.x[carriernum].insert(state.x[carriernum].begin() + posnum + 2, pos);
 
-    state.x[carriernum].insert({ptr->first + model.G.g[ptr->second][outdnum].cost, model.G.g[ptr->second][outdnum].to});
-    state.x[carriernum].insert({ptr->first + (model.G.g[ptr->second][outdnum].cost * 2), ptr->second});
-    cout << "after: \n";
-    for (auto &i : state.x[0]) {
-      cout << i << "\n";
+    state.l[carriernum] += model.G.g[pos][outdnum].cost * 2; // TODO: 偏重の場合対応
+
+    while (model.T < state.l[carriernum]) {
+      state.l[carriernum] -= model.DIST[state.x[carriernum].end()[-1]][state.x[carriernum].end()[-2]];
+      state.x[carriernum].pop_back();
     }
-    exit(0);
   }
 
   //温度の更新
@@ -544,6 +546,7 @@ public:
 
   //探索
   STATE simulated_annealing() {
+    int cnt = 0;
     while (t > 1.0) { //十分冷えるまで
       for (int i = 0; i < R; i++) {
         // xの近傍からランダムに選ぶ
@@ -557,6 +560,7 @@ public:
         } else if (exp(-delta / t) > frand()) { //ある程度の確率で探索を許す
           state = new_state;
         }
+        state = new_state;
 
         //最適解の更新
         if (calc_score(state) > score) {
@@ -567,6 +571,10 @@ public:
 
       //温度の更新
       t = next_T(t);
+      if (++cnt % 10 == 0) {
+        cout << "temp: " << t << "\n";
+        cout << state.x << "\n";
+      }
     }
 
     return ans;
@@ -595,21 +603,21 @@ int main() {
 
   putLogo();
   checkArgs(model);
-  auto res = byGreedy(model);
+  STATE res = byGreedy(model);
+  cout << "-----------------------------\n";
   cout << "res:\n";
-  for (int i = 0; i < res.size(); i++) {
-    cout << "#" << i << ": " << res[i] << "\n";
+  for (int i = 0; i < res.x.size(); i++) {
+    cout << "#" << i << ": " << res.x[i] << "\n";
+    cout << "len: " << res.l[i] << "\n";
   }
-  cout << "l = " << prev(res[0].end())->first << "\n";
 
   cout << "-----------------------------\n";
   cout << "Greedy part finished\n";
   cout << "-----------------------------\n";
 
   srand(time(NULL));
-  STATE state;
-  state.x = res;
-  SA sa(state, 1000, 1000, model);
+  STATE state = res;
+  SA sa(state, 100, 1000, model);
 
   cout << fixed << setprecision(32);
   cout << sa.simulated_annealing().x << "\n";
