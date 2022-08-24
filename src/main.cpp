@@ -392,18 +392,18 @@ STATE byGreedy(const MODEL &model) {
     que.insert({0, i}); // queは運送者がいつ空いてるかを管理する setなので時間が先な方が優先
 
   int t = 0; // 現在シミュレート時間
-  cout << "que: " << que << "\n";
+  // cout << "que: " << que << "\n";
   while (not que.empty()) {
     if ((*que.begin()).first == t) {
-      cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
+      // cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
       int64_t num = que.begin()->second; // 運送者番号 -> num
       que.erase(que.begin());            // queの上から一つとる
       res.x[num].push_back(carriers[num].pos);
 
-      cout << "pos: " << carriers[num].pos << "\n";
+      // cout << "pos: " << carriers[num].pos << "\n";
 
       while (carriers[num].passengers.find(carriers[num].pos) != carriers[num].passengers.end()) { // 荷物下ろせるやつは全て下ろす
-        cout << "dropped at: " << carriers[num].pos << "\n";
+        // cout << "dropped at: " << carriers[num].pos << "\n";
         carriers[num].passengers.erase(carriers[num].pos);
       }
 
@@ -412,42 +412,43 @@ STATE byGreedy(const MODEL &model) {
       m[carriers[num].pos].clear();
 
       if (carriers[num].passengers.size() == 0) { // 荷物を載せていなかった場合
-        cout << "no passenger detected\n";
-        cout << "m: ";
+        // cout << "no passenger detected\n";
+        // cout << "m: ";
         for (auto &i : m)
-          cout << i.size() << " ";
-        cout << "\n";
+          ;
+        // cout << i.size() << " ";
+        // cout << "\n";
         int next = 0;
         for (int i = 0; i < model.V; i++)
           if (m[next].size() < m[i].size())
             next = i;
 
         if (m[next].size() == 0) {
-          cout << "no job detected\n";
+          // cout << "no job detected\n";
           continue;
         }
         next = model.NEXT[carriers[num].pos][next];
-        cout << "next: " << next << "\n";
+        // cout << "next: " << next << "\n";
         if (model.DIST[carriers[num].pos][next] == LLONG_MAX) {
-          cout << "task end\n";
+          // cout << "task end\n";
           continue;
         }
         que.insert({t + model.DIST[carriers[num].pos][next], num});
         carriers[num].pos = next;
       } else { // 荷物を載せていた場合
-        cout << "passenger detected\n";
+        // cout << "passenger detected\n";
         int next = -1; // nextに遷移する
         {
           vector<int64_t> cnts(model.V, 0); // とりあえず頂点iに行きたい荷物の数
           for (auto &i : carriers[num].passengers)
             if (model.DIST[carriers[num].pos][i] != LLONG_MAX)
               cnts[model.NEXT[carriers[num].pos][i]]++;
-          cout << "cnts: " << cnts << "\n";
+          // cout << "cnts: " << cnts << "\n";
           next = max_element(cnts.begin(), cnts.end()) - cnts.begin();
         }
-        cout << "next: " << next << "\n";
+        // cout << "next: " << next << "\n";
         if (model.DIST[carriers[num].pos][next] == LLONG_MAX) {
-          cout << "task end\n";
+          // cout << "task end\n";
           continue;
         }
         que.insert({t + model.DIST[carriers[num].pos][next], num});
@@ -455,6 +456,7 @@ STATE byGreedy(const MODEL &model) {
       }
     } else {
       t = (*que.begin()).first; // 時刻tを追従させる
+      cout << t << "\n";
     }
   }
 
@@ -470,12 +472,13 @@ STATE byGreedy(const MODEL &model) {
 
 //焼きなまし
 class SA {
-  STATE state;  // 現在の状態
-  STATE ans;    // 暫定最適状態
-  double score; // 暫定最適状態ansを評価関数に通したスコア
-  double t;     // 温度
-  const int R;  // 反復回数
-  MODEL model;  // モデル
+  STATE state;   // 現在の状態
+  STATE ans;     // 暫定最適状態
+  double score;  // 暫定最適状態ansを評価関数に通したスコア
+  double t;      // 温度
+  const int R;   // 反復回数
+  MODEL model;   // モデル
+  double bscore; // 初期スコア
 
   double frand() {
     return ((double)rand() / (RAND_MAX));
@@ -546,6 +549,7 @@ public:
 
   //探索
   STATE simulated_annealing() {
+    bscore = calc_score(state);
     int cnt = 0;
     while (t > 1.0) { //十分冷えるまで
       for (int i = 0; i < R; i++) {
@@ -572,11 +576,14 @@ public:
       //温度の更新
       t = next_T(t);
       if (++cnt % 10 == 0) {
+        cout << "--------------------------------\n";
         cout << "temp: " << t << "\n";
-        cout << state.x << "\n";
+        for (int i = 0; i < state.x.size(); i++)
+          cout << "#" << i << ": " << state.x[i] << "\n";
       }
     }
 
+    cout << "score: " << bscore << " -> " << calc_score(ans) << "\n";
     return ans;
   }
 };
@@ -620,5 +627,9 @@ int main() {
   SA sa(state, 100, 1000, model);
 
   cout << fixed << setprecision(32);
-  cout << sa.simulated_annealing().x << "\n";
+  auto ans = sa.simulated_annealing();
+  cout << "result: \n";
+  for (int i = 0; i < ans.x.size(); i++)
+    cout << "#" << i << ": " << ans.x[i] << "\n";
+  cout << "len: " << ans.l << "\n";
 }
