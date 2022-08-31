@@ -554,7 +554,6 @@ public:
   //探索
   STATE simulated_annealing() {
     bscore = calc_score(state);
-    int cnt = 0;
     while (t > 1.0) { //十分冷えるまで
       for (int i = 0; i < R; i++) {
         // xの近傍からランダムに選ぶ
@@ -579,12 +578,6 @@ public:
 
       //温度の更新
       t = next_T(t);
-      if (++cnt % 10 == 0) {
-        cout << "--------------------------------\n";
-        cout << "temp: " << t << "\n";
-        for (int i = 0; i < state.x.size(); i++)
-          cout << "#" << i << ": " << state.x[i] << "\n";
-      }
     }
 
     cout << "score: " << bscore << " -> " << calc_score(ans) << "\n";
@@ -612,22 +605,22 @@ int main() {
   model.DIST = model.G.warshallfloyd().first;
   model.NEXT = model.G.warshallfloyd().second;
 
-  putLogo();
-  checkArgs(model);
+  //putLogo();
+  //checkArgs(model);
   STATE res;
   // res = byGreedy(model);
   res = fake(model);
 
-  cout << "-----------------------------\n";
-  cout << "res:\n";
-  for (int i = 0; i < res.x.size(); i++) {
-    cout << "#" << i << ": " << res.x[i] << "\n";
-    cout << "len: " << res.l[i] << "\n";
-  }
+  // cout << "-----------------------------\n";
+  // cout << "res:\n";
+  // for (int i = 0; i < res.x.size(); i++) {
+  //   cout << "#" << i << ": " << res.x[i] << "\n";
+  //   cout << "len: " << res.l[i] << "\n";
+  // }
 
-  cout << "-----------------------------\n";
-  cout << "Greedy part finished\n";
-  cout << "-----------------------------\n";
+  // cout << "-----------------------------\n";
+  // cout << "Greedy part finished\n";
+  // cout << "-----------------------------\n";
 
   srand(time(NULL));
   STATE state = res;
@@ -635,8 +628,8 @@ int main() {
 
   cout << fixed << setprecision(32);
   auto ans = sa.simulated_annealing();
-  cout << "result: \n";
-  for (int i = 0; i < ans.x.size(); i++)
-    cout << "#" << i << ": " << ans.x[i] << "\n";
-  cout << "len: " << ans.l << "\n";
+  // cout << "result: \n";
+  // for (int i = 0; i < ans.x.size(); i++)
+  //   cout << "#" << i << ": " << ans.x[i] << "\n";
+  // cout << "len: " << ans.l << "\n";
 }
