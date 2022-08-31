@@ -373,6 +373,29 @@ struct STATE {           // 状態構造体
   vector<int> l;         // パス長
 };
 
+STATE fake(const MODEL &model) {
+  vector<Carrier> carriers; // 運送者たち id:i
+  for (size_t i = 0; i < model.M.size(); i++)
+    for (int64_t j = 0; j < model.M[i]; j++)
+      carriers.emplace_back(Carrier(i)); // 運送者情報をcarriersに詰める
+
+  STATE res; // SA法用状態保持
+  res.x.resize(carriers.size());
+  res.l.resize(carriers.size());
+
+  for(int i=0;i<carriers.size();i++)
+    res.x[i].push_back(carriers[i].pos);
+
+  for (int i = 0; i < res.x.size(); i++) {
+    int sum = 0;
+    for (int j = 0; j < res.x[i].size() - 1; j++)
+      sum += model.DIST[res.x[i][j]][res.x[i][j + 1]];
+    res.l[i] = sum;
+  }
+
+  return res;
+}
+
 STATE byGreedy(const MODEL &model) {
   vector<Carrier> carriers; // 運送者たち id:i
   for (size_t i = 0; i < model.M.size(); i++)
@@ -392,18 +415,13 @@ STATE byGreedy(const MODEL &model) {
     que.insert({0, i}); // queは運送者がいつ空いてるかを管理する setなので時間が先な方が優先
 
   int t = 0; // 現在シミュレート時間
-  // cout << "que: " << que << "\n";
   while (not que.empty()) {
     if ((*que.begin()).first == t) {
-      // cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
       int64_t num = que.begin()->second; // 運送者番号 -> num
       que.erase(que.begin());            // queの上から一つとる
       res.x[num].push_back(carriers[num].pos);
 
-      // cout << "pos: " << carriers[num].pos << "\n";
-
       while (carriers[num].passengers.find(carriers[num].pos) != carriers[num].passengers.end()) { // 荷物下ろせるやつは全て下ろす
-        // cout << "dropped at: " << carriers[num].pos << "\n";
         carriers[num].passengers.erase(carriers[num].pos);
       }
 
@@ -412,43 +430,30 @@ STATE byGreedy(const MODEL &model) {
       m[carriers[num].pos].clear();
 
       if (carriers[num].passengers.size() == 0) { // 荷物を載せていなかった場合
-        // cout << "no passenger detected\n";
-        // cout << "m: ";
-        for (auto &i : m)
-          ;
-        // cout << i.size() << " ";
-        // cout << "\n";
         int next = 0;
         for (int i = 0; i < model.V; i++)
           if (m[next].size() < m[i].size())
             next = i;
 
         if (m[next].size() == 0) {
-          // cout << "no job detected\n";
           continue;
         }
         next = model.NEXT[carriers[num].pos][next];
-        // cout << "next: " << next << "\n";
         if (model.DIST[carriers[num].pos][next] == LLONG_MAX) {
-          // cout << "task end\n";
           continue;
         }
         que.insert({t + model.DIST[carriers[num].pos][next], num});
         carriers[num].pos = next;
-      } else { // 荷物を載せていた場合
-        // cout << "passenger detected\n";
+      } else {         // 荷物を載せていた場合
         int next = -1; // nextに遷移する
         {
           vector<int64_t> cnts(model.V, 0); // とりあえず頂点iに行きたい荷物の数
           for (auto &i : carriers[num].passengers)
             if (model.DIST[carriers[num].pos][i] != LLONG_MAX)
               cnts[model.NEXT[carriers[num].pos][i]]++;
-          // cout << "cnts: " << cnts << "\n";
           next = max_element(cnts.begin(), cnts.end()) - cnts.begin();
         }
-        // cout << "next: " << next << "\n";
         if (model.DIST[carriers[num].pos][next] == LLONG_MAX) {
-          // cout << "task end\n";
           continue;
         }
         que.insert({t + model.DIST[carriers[num].pos][next], num});
@@ -456,7 +461,6 @@ STATE byGreedy(const MODEL &model) {
       }
     } else {
       t = (*que.begin()).first; // 時刻tを追従させる
-      cout << t << "\n";
     }
   }
 
@@ -610,7 +614,10 @@ int main() {
 
   putLogo();
   checkArgs(model);
-  STATE res = byGreedy(model);
+  STATE res;
+  // res = byGreedy(model);
+  res = fake(model);
+
   cout << "-----------------------------\n";
   cout << "res:\n";
   for (int i = 0; i < res.x.size(); i++) {
