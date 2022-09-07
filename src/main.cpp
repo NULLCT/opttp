@@ -34,8 +34,6 @@
 #include <utility>
 #include <vector>
 
-#define ALL(var) (var).begin(), (var).end()
-
 using namespace std;
 
 template <class T, size_t S>
@@ -383,7 +381,7 @@ STATE fake(const MODEL &model) {
   res.x.resize(carriers.size());
   res.l.resize(carriers.size());
 
-  for(int i=0;i<carriers.size();i++)
+  for (int i = 0; i < carriers.size(); i++)
     res.x[i].push_back(carriers[i].pos);
 
   for (int i = 0; i < res.x.size(); i++) {
@@ -545,39 +543,39 @@ class SA {
   }
 
 public:
-  SA(STATE &_state, double _t, int _r, MODEL &_model) : t(_t), R(_r), model(_model) { // 温度の初期値、反復回数の初期値
+  SA(STATE &_state, double _t, int _r, MODEL &_model) : t(_t),          // 初期温度
+                                                        R(_r),          // 試行回数
+                                                        model(_model) { // 使用モデル
     state = _state;
     ans = _state;
     score = calc_score(ans);
   }
 
-  //探索
+  // 焼きなまし法
   STATE simulated_annealing() {
     bscore = calc_score(state);
     while (t > 1.0) { //十分冷えるまで
       for (int i = 0; i < R; i++) {
-        // xの近傍からランダムに選ぶ
+
         STATE new_state = state;
         modify(new_state);
-        //変化量
         double delta = calc_score(state) - calc_score(new_state);
 
-        if (delta < 0.0) { //よりよい解が見つかった場合
+        if (delta < 0.0) {
           state = new_state;
-        } else if (exp(-delta / t) > frand()) { //ある程度の確率で探索を許す
+        } else if (exp(-delta / t) > frand()) {
           state = new_state;
         }
-        state = new_state;
 
-        //最適解の更新
         if (calc_score(state) > score) {
           score = calc_score(state);
           ans = state;
         }
+
       }
 
-      //温度の更新
       t = next_T(t);
+      cout << t << "\n";
     }
 
     cout << "score: " << bscore << " -> " << calc_score(ans) << "\n";
@@ -608,10 +606,8 @@ int main() {
   STATE res;
   res = fake(model);
 
-
-  srand(time(NULL));
   STATE state = res;
-  SA sa(state, 100, 1000, model);
+  SA sa(state, 10000, 100, model);
 
   cout << fixed << setprecision(32);
   auto ans = sa.simulated_annealing();
