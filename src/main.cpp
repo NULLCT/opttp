@@ -605,22 +605,9 @@ int main() {
   model.DIST = model.G.warshallfloyd().first;
   model.NEXT = model.G.warshallfloyd().second;
 
-  //putLogo();
-  //checkArgs(model);
   STATE res;
-  // res = byGreedy(model);
   res = fake(model);
 
-  // cout << "-----------------------------\n";
-  // cout << "res:\n";
-  // for (int i = 0; i < res.x.size(); i++) {
-  //   cout << "#" << i << ": " << res.x[i] << "\n";
-  //   cout << "len: " << res.l[i] << "\n";
-  // }
-
-  // cout << "-----------------------------\n";
-  // cout << "Greedy part finished\n";
-  // cout << "-----------------------------\n";
 
   srand(time(NULL));
   STATE state = res;
@@ -628,8 +615,4 @@ int main() {
 
   cout << fixed << setprecision(32);
   auto ans = sa.simulated_annealing();
-  // cout << "result: \n";
-  // for (int i = 0; i < ans.x.size(); i++)
-  //   cout << "#" << i << ": " << ans.x[i] << "\n";
-  // cout << "len: " << ans.l << "\n";
 }
