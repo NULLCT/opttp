@@ -58,7 +58,7 @@ public:
 };
 
 int main() {
-  srand(time(nullptr));
+  random_device rand;
   vector<vector<pair<int, int>>> g(V);
   UnionFind uf(V);
 
