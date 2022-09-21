@@ -478,6 +478,7 @@ class SA {
   STATE ans;     // 暫定最適状態
   double score;  // 暫定最適状態ansを評価関数に通したスコア
   double t;      // 温度
+  double coe;    // 冷却係数
   const int R;   // 反復回数
   MODEL model;   // モデル
   double bscore; // 初期スコア
@@ -488,7 +489,7 @@ class SA {
 
   //評価関数
   double calc_score(const STATE &state) {
-    double res = -10;
+    double res = 0;
     set<tuple<int, int, int>> que; // 時刻 番号 頂点
     for (int i = 0; i < state.x.size(); i++) {
       int time = 0;
@@ -539,13 +540,14 @@ class SA {
 
   //温度の更新
   double next_T(double t) {
-    return t * 0.995;
+    return t * coe;
   }
 
 public:
-  SA(STATE &_state, double _t, int _r, MODEL &_model) : t(_t),          // 初期温度
-                                                        R(_r),          // 試行回数
-                                                        model(_model) { // 使用モデル
+  SA(STATE &_state, double _t, int _r, double _coe, MODEL &_model) : t(_t),          // 初期温度
+                                                                     R(_r),          // 試行回数
+                                                                     coe(_coe),      // 冷却係数
+                                                                     model(_model) { // 使用モデル
     state = _state;
     ans = _state;
     score = calc_score(ans);
@@ -571,7 +573,6 @@ public:
           score = calc_score(state);
           ans = state;
         }
-
       }
 
       t = next_T(t);
@@ -607,7 +608,7 @@ int main() {
   res = fake(model);
 
   STATE state = res;
-  SA sa(state, 10000, 100, model);
+  SA sa(state, 10000, 100, 0.99, model);
 
   cout << fixed << setprecision(32);
   auto ans = sa.simulated_annealing();
