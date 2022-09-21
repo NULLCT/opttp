@@ -608,7 +608,7 @@ int main() {
   res = fake(model);
 
   STATE state = res;
-  SA sa(state, 10000, 100, 0.99, model);
+  SA sa(state, 10000, 100, 0.9, model);
 
   cout << fixed << setprecision(32);
   auto ans = sa.simulated_annealing();
