@@ -14,5 +14,7 @@ do
   ./main<$i.txt >out$i.txt &
 done
 
+wait
+
 tail -n 1 -q out* > res
 rm *.txt
