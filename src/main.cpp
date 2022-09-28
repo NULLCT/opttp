@@ -507,7 +507,7 @@ class SA {
     vector<set<int64_t>> carring(state.x.size()); // 各運送者が何を保持しているか
 
     for (auto &q : que) {
-      auto [t, n, v] = q; // 時刻 番号 頂点
+      auto &[t, n, v] = q; // 時刻 番号 頂点
       for (auto &i : m[v])
         carring[n].insert(i);
       m[v].clear();
@@ -608,8 +608,9 @@ int main() {
   res = fake(model);
 
   STATE state = res;
-  SA sa(state, 10000, 100, 0.9, model);
+  SA sa(state, 10000, 1000, 0.99, model);
 
   cout << fixed << setprecision(32);
   auto ans = sa.simulated_annealing();
+  cout<<ans.l<<": "<<ans.x<<"\n";
 }
