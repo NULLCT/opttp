@@ -579,7 +579,7 @@ public:
       cout << t << "\n";
     }
 
-    cout << "score: " << bscore << " -> " << calc_score(ans) << "\n";
+    cout << bscore << "," << calc_score(ans) << "\n";
     return ans;
   }
 };
@@ -608,9 +608,9 @@ int main() {
   res = fake(model);
 
   STATE state = res;
-  SA sa(state, 10000, 1000, 0.99, model);
+  SA sa(state, 100000, 1000, 0.9, model);
 
   cout << fixed << setprecision(32);
   auto ans = sa.simulated_annealing();
-  cout<<ans.l<<": "<<ans.x<<"\n";
+  //cout<<ans.l<<": "<<ans.x<<"\n";
 }

@@ -11,7 +11,8 @@ using namespace std;
 constexpr int V = 100;
 constexpr int T = 1000;
 constexpr int M = 10;
-constexpr int Q = 50;
+constexpr int Q = 1000;
+constexpr int L = 5;
 
 class UnionFind {
 public:
@@ -66,7 +67,7 @@ int main() {
   BG:
     int a = rand() % V;
     int b = rand() % V;
-    int l = (rand() % 10) + 1;
+    int l = (rand() % L) + 1;
     while (a == b)
       b = rand() % V;
 

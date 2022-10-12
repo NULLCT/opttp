@@ -1,7 +1,7 @@
 #!/bin/bash
 
 clang++ -std=c++17 -O3 ./gen.cpp -o gen
-Q=100
+Q=1
 for i in `seq $Q`
 do
   ./gen >$i.txt
@@ -16,5 +16,5 @@ done
 
 wait
 
-tail -n 1 -q out* > res
+tail -n 1 -q out* > res.csv
 rm *.txt
