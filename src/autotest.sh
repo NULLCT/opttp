@@ -1,7 +1,7 @@
 #!/bin/bash
 
 clang++ -std=c++17 -O3 ./gen.cpp -o gen
-Q=1
+Q=2500
 for i in `seq $Q`
 do
   ./gen >$i.txt
