@@ -7,3 +7,6 @@ set(CMAKE_CXX_FLAGS "-Wall -Ofast")
 add_executable(opttp.out
   src/main.cpp
   )
+add_executable(gen.out
+  src/gen.cpp
+  )
