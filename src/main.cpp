@@ -472,23 +472,23 @@ STATE byGreedy(const MODEL &model) {
   return res;
 }
 
-//焼きなまし
+// 焼きなまし法
 class SA {
-  STATE state;   // 現在の状態
-  STATE ans;     // 暫定最適状態
-  double score;  // 暫定最適状態ansを評価関数に通したスコア
-  double t;      // 温度
-  double coe;    // 冷却係数
-  const int R;   // 反復回数
-  MODEL model;   // モデル
-  double bscore; // 初期スコア
+  STATE state;              // 現在の状態
+  double temp;              // 温度
+  const int repnum;         // 反復回数
+  const double coolingcoef; // 冷却係数
+  MODEL model;              // モデル
+  STATE beststate;          // 暫定最適状態
+  double beststate_score;   // 暫定最適状態ansを評価関数に通したスコア
 
+  // [0,1]の乱数を返す
   double frand() {
     return ((double)rand() / (RAND_MAX));
   }
 
-  //評価関数
-  double calc_score(const STATE &state) {
+  // 評価関数
+  double evalScore(const STATE &state) {
     double res = 0;
     set<tuple<int, int, int>> que; // 時刻 番号 頂点
     for (int i = 0; i < state.x.size(); i++) {
@@ -520,7 +520,7 @@ class SA {
     return res;
   }
 
-  //近傍からランダムに選ぶ
+  // s-opt法 近傍に行き帰りするパスを追加
   void modify(STATE &state) {
     int carriernum = (rand() % state.x.size());                             // 何番目の運送者か
     int posnum = (rand() % state.x[carriernum].size());                     // 運送経路履歴の何番目頂点を選ぶか
@@ -538,49 +538,46 @@ class SA {
     }
   }
 
-  //温度の更新
+  // 温度の更新
   double next_T(double t) {
-    return t * coe;
+    return t * coolingcoef;
   }
 
 public:
-  SA(STATE &_state, double _t, int _r, double _coe, MODEL &_model) : t(_t),          // 初期温度
-                                                                     R(_r),          // 試行回数
-                                                                     coe(_coe),      // 冷却係数
-                                                                     model(_model) { // 使用モデル
-    state = _state;
-    ans = _state;
-    score = calc_score(ans);
-  }
+  SA(STATE &_state, double _temp, int _repnum, double _coolingcoef, MODEL &_model) : state(_state),             // 状態
+                                                                                     temp(_temp),               // 温度
+                                                                                     repnum(_repnum),           // 試行回数
+                                                                                     coolingcoef(_coolingcoef), // 冷却係数
+                                                                                     model(_model),             // 運送モデル
+                                                                                     beststate(_state),
+                                                                                     beststate_score(evalScore(_state)) {}
 
   // 焼きなまし法
   STATE simulated_annealing() {
-    bscore = calc_score(state);
-    while (t > 1.0) { //十分冷えるまで
-      for (int i = 0; i < R; i++) {
+    double initscore = evalScore(state);
+    while (temp > 1.0) { // 十分冷えるまで
+      for (int i = 0; i < repnum; i++) {
+        STATE newstate = state;
+        modify(newstate);
+        double statescore = evalScore(state);
+        double newstatescore = evalScore(newstate);
+        double delta = newstatescore - statescore;
 
-        STATE new_state = state;
-        modify(new_state);
-        double delta = calc_score(state) - calc_score(new_state);
+        if (0 < delta)
+          state = newstate;
+        else if (frand() < exp(delta / temp))
+          state = newstate;
 
-        if (delta < 0.0) {
-          state = new_state;
-        } else if (exp(-delta / t) > frand()) {
-          state = new_state;
-        }
-
-        if (calc_score(state) > score) {
-          score = calc_score(state);
-          ans = state;
+        if (beststate_score < newstatescore) {
+          beststate_score = newstatescore;
+          beststate = newstate;
         }
       }
-
-      t = next_T(t);
-      cout << t << "\n";
+      temp = next_T(temp);
+      cout << temp << "\n";
     }
-
-    cout << bscore << "," << calc_score(ans) << "\n";
-    return ans;
+    cout << initscore << "," << beststate_score << "\n";
+    return beststate;
   }
 };
 
@@ -608,9 +605,9 @@ int main() {
   res = fake(model);
 
   STATE state = res;
-  SA sa(state, 100000, 1000, 0.9, model);
+  SA sa(state, 100000, 10, 0.9, model);
 
   cout << fixed << setprecision(32);
   auto ans = sa.simulated_annealing();
-  //cout<<ans.l<<": "<<ans.x<<"\n";
+  cout << ans.l << ": " << ans.x << "\n";
 }
