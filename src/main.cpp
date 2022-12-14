@@ -36,6 +36,9 @@
 
 using namespace std;
 
+#define D(var) cerr << __LINE__ << ":" << #var << " " << var << endl;
+#define DD(var) for_each(begin(var), end(var), [](const auto &i) { D(i); })
+
 template <class T, size_t S>
 ostream &operator<<(ostream &_ostr, const array<T, S> &_v);
 template <class T>
@@ -366,9 +369,9 @@ public:
 };
 
 // https://jetbead.hatenablog.com/entry/20120623/1340419446
-struct STATE {           // 状態構造体
-  vector<vector<int>> x; // 頂点移動履歴
-  vector<int> l;         // パス長
+struct STATE {                 // 状態構造体
+  vector<vector<int>> acthist; // 頂点移動履歴
+  vector<int> pathlen;         // パス長
 };
 
 STATE fake(const MODEL &model) {
@@ -378,17 +381,26 @@ STATE fake(const MODEL &model) {
       carriers.emplace_back(Carrier(i)); // 運送者情報をcarriersに詰める
 
   STATE res; // SA法用状態保持
-  res.x.resize(carriers.size());
-  res.l.resize(carriers.size());
+  res.acthist.resize(carriers.size());
+  res.pathlen.resize(carriers.size());
 
-  for (int i = 0; i < carriers.size(); i++)
-    res.x[i].push_back(carriers[i].pos);
+  for (int i = 0; i < carriers.size(); i++) {
+    res.acthist[i].push_back(carriers[i].pos);
+    while (true) {
+      int nextpos = rand() % model.G.g[res.acthist[i].back()].size();
+      if (res.pathlen[i] + model.G.g[res.acthist[i].back()][nextpos].cost <= model.T) {
+        res.acthist[i].push_back(model.G.g[res.acthist[i].back()][nextpos].to);
+        res.pathlen[i] += model.G.g[res.acthist[i].back()][nextpos].cost;
+      } else {
+        break;
+      }
+    }
+  }
 
-  for (int i = 0; i < res.x.size(); i++) {
-    int sum = 0;
-    for (int j = 0; j < res.x[i].size() - 1; j++)
-      sum += model.DIST[res.x[i][j]][res.x[i][j + 1]];
-    res.l[i] = sum;
+  cout << res.acthist.size() << "\n";
+  for (int i = 0; i < res.acthist.size(); i++) {
+    cout << i << ": " << res.acthist[i] << "\n";
+    cout << res.pathlen[i] << "\n";
   }
 
   return res;
@@ -401,8 +413,8 @@ STATE byGreedy(const MODEL &model) {
       carriers.emplace_back(Carrier(i)); // 運送者情報をcarriersに詰める
 
   STATE res; // SA法用状態保持
-  res.x.resize(carriers.size());
-  res.l.resize(carriers.size());
+  res.acthist.resize(carriers.size());
+  res.pathlen.resize(carriers.size());
 
   vector<unordered_multiset<int64_t>> m(model.V); // 配達するもの(頂点m[i]に行きたい)
   for (auto &[x, y] : model.Q)                    // 頂点xからyに行きたい
@@ -417,7 +429,7 @@ STATE byGreedy(const MODEL &model) {
     if ((*que.begin()).first == t) {
       int64_t num = que.begin()->second; // 運送者番号 -> num
       que.erase(que.begin());            // queの上から一つとる
-      res.x[num].push_back(carriers[num].pos);
+      res.acthist[num].push_back(carriers[num].pos);
 
       while (carriers[num].passengers.find(carriers[num].pos) != carriers[num].passengers.end()) { // 荷物下ろせるやつは全て下ろす
         carriers[num].passengers.erase(carriers[num].pos);
@@ -462,11 +474,11 @@ STATE byGreedy(const MODEL &model) {
     }
   }
 
-  for (int i = 0; i < res.x.size(); i++) {
+  for (int i = 0; i < res.acthist.size(); i++) {
     int sum = 0;
-    for (int j = 0; j < res.x[i].size() - 1; j++)
-      sum += model.DIST[res.x[i][j]][res.x[i][j + 1]];
-    res.l[i] = sum;
+    for (int j = 0; j < res.acthist[i].size() - 1; j++)
+      sum += model.DIST[res.acthist[i][j]][res.acthist[i][j + 1]];
+    res.pathlen[i] = sum;
   }
 
   return res;
@@ -480,7 +492,7 @@ class SA {
   const double coolingcoef; // 冷却係数
   MODEL model;              // モデル
   STATE beststate;          // 暫定最適状態
-  double beststate_score;   // 暫定最適状態ansを評価関数に通したスコア
+  int64_t beststate_score;  // 暫定最適状態ansを評価関数に通したスコア
 
   // [0,1]の乱数を返す
   double frand() {
@@ -488,23 +500,23 @@ class SA {
   }
 
   // 評価関数
-  double evalScore(const STATE &state) {
-    double res = 0;
+  int64_t evalScore(const STATE &state) {
+    int64_t res = 0;               // 評価値
     set<tuple<int, int, int>> que; // 時刻 番号 頂点
-    for (int i = 0; i < state.x.size(); i++) {
+    for (int i = 0; i < state.acthist.size(); i++) {
       int time = 0;
-      for (int j = 0; j < state.x[i].size(); j++) {
-        que.insert({time, i, state.x[i][j]});
-        if (j + 1 != state.x[i].size())
-          time += model.DIST[state.x[i][j]][state.x[i][j + 1]];
+      for (int j = 0; j < state.acthist[i].size(); j++) {
+        que.insert({time, i, state.acthist[i][j]});
+        if (j + 1 != state.acthist[i].size())
+          time += model.DIST[state.acthist[i][j]][state.acthist[i][j + 1]];
       }
     }
 
-    vector<set<int64_t>> m(model.V); // 配達するもの(頂点m[i]に行きたい)
-    for (auto &[x, y] : model.Q)     // 頂点xからyに行きたい
-      m[x].insert(y);                // 運送物登録
+    vector<multiset<int64_t>> m(model.V); // m[x] = y -> 頂点xからyに行きたい
+    for (auto &[x, y] : model.Q)          // 頂点xからyに行きたい
+      m[x].insert(y);                     // 運送物登録
 
-    vector<set<int64_t>> carring(state.x.size()); // 各運送者が何を保持しているか
+    vector<set<int64_t>> carring(state.acthist.size()); // 各運送者が何を保持しているか
 
     for (auto &q : que) {
       auto &[t, n, v] = q; // 時刻 番号 頂点
@@ -522,25 +534,28 @@ class SA {
 
   // s-opt法 近傍に行き帰りするパスを追加
   void modify(STATE &state) {
-    int carriernum = (rand() % state.x.size());                             // 何番目の運送者か
-    int posnum = (rand() % state.x[carriernum].size());                     // 運送経路履歴の何番目頂点を選ぶか
-    int outdnum = (rand() % model.G.g[state.x[carriernum][posnum]].size()); // 何本目の辺を選ぶか
-    int pos = state.x[carriernum][posnum];                                  // 運送者がいる頂点番号
+    int carriernum = (rand() % state.acthist.size());                             // 何番目の運送者か
+    int posnum = (rand() % state.acthist[carriernum].size());                     // 運送経路履歴の何番目頂点を選ぶか
+    int outdnum = (rand() % model.G.g[state.acthist[carriernum][posnum]].size()); // 何本目の辺を選ぶか
+    int pos = state.acthist[carriernum][posnum];                                  // 運送者がいる頂点番号
+    int nextpos = model.G.g[pos][outdnum].to;                                     // これから行き来する頂点
 
-    state.x[carriernum].insert(state.x[carriernum].begin() + posnum + 1, model.G.g[pos][outdnum].to);
-    state.x[carriernum].insert(state.x[carriernum].begin() + posnum + 2, pos);
+    state.acthist[carriernum].insert(state.acthist[carriernum].begin() + posnum + 1, nextpos);
+    state.acthist[carriernum].insert(state.acthist[carriernum].begin() + posnum + 2, pos);
 
-    state.l[carriernum] += model.G.g[pos][outdnum].cost * 2; // TODO: 偏重の場合対応
+    state.pathlen[carriernum] += model.DIST[pos][nextpos] + model.DIST[nextpos][pos];
 
-    while (model.T < state.l[carriernum]) {
-      state.l[carriernum] -= model.DIST[state.x[carriernum].end()[-1]][state.x[carriernum].end()[-2]];
-      state.x[carriernum].pop_back();
+    while (model.T < state.pathlen[carriernum]) {
+      state.pathlen[carriernum] -= model.DIST[state.acthist[carriernum].end()[-1]][state.acthist[carriernum].end()[-2]];
+      state.acthist[carriernum].pop_back();
     }
   }
 
   // 温度の更新
   double next_T(double t) {
-    return t * coolingcoef;
+    t *= coolingcoef;
+    cout << t << "\n";
+    return t;
   }
 
 public:
@@ -554,19 +569,29 @@ public:
 
   // 焼きなまし法
   STATE simulated_annealing() {
-    double initscore = evalScore(state);
+    int64_t initscore = evalScore(state);
+    int nonexped = 0;
+    int exped = 0;
+    vector<double> hist;
     while (temp > 1.0) { // 十分冷えるまで
       for (int i = 0; i < repnum; i++) {
         STATE newstate = state;
         modify(newstate);
-        double statescore = evalScore(state);
-        double newstatescore = evalScore(newstate);
-        double delta = newstatescore - statescore;
+        int64_t statescore = evalScore(state);
+        int64_t newstatescore = evalScore(newstate);
+        int64_t delta = newstatescore - statescore;
 
-        if (0 < delta)
+        if (0 < delta) {
           state = newstate;
-        else if (frand() < exp(delta / temp))
+          nonexped++;
+        } else if (frand() < exp(delta / temp)) {
           state = newstate;
+          exped++;
+        }
+
+        if ((nonexped + exped) % 10 == 0) {
+          hist.push_back((double)exped / nonexped);
+        }
 
         if (beststate_score < newstatescore) {
           beststate_score = newstatescore;
@@ -574,9 +599,14 @@ public:
         }
       }
       temp = next_T(temp);
-      cout << temp << "\n";
     }
     cout << initscore << "," << beststate_score << "\n";
+    cout << "exp/nonexp = " << exped << "/" << nonexped << "\n";
+    cout << hist << "\n";
+    for(auto &i:hist){
+      cout<<(int)round(i)<<", ";
+    }
+    cout<<"\n";
     return beststate;
   }
 };
@@ -605,9 +635,13 @@ int main() {
   res = fake(model);
 
   STATE state = res;
-  SA sa(state, 100000, 10, 0.9, model);
+  SA sa(state, 100, 100, 0.99, model);
 
   cout << fixed << setprecision(32);
   auto ans = sa.simulated_annealing();
-  cout << ans.l << ": " << ans.x << "\n";
+  for (int i = 0; i < ans.pathlen.size(); i++) {
+    cout << "carrier#" << i << ":\n";
+    cout << "pathlen: " << ans.pathlen[i] << "\n";
+    cout << "acthist: " << ans.acthist[i] << "\n";
+  }
 }
