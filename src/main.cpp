@@ -208,7 +208,7 @@ class SA {
         if (0 < delta) {
           state = newstate;
           nonexped++;
-        } else if (frand() < exp(delta / temp)) {
+        } else if (frand() < exp(-delta / temp)) {
           state = newstate;
           exped++;
         }
@@ -219,8 +219,9 @@ class SA {
         }
       }
       temp *= coolingcoef;
-      cout << temp << " ("
-           << "exp/nexp = " << exped << "/" << nonexped << ")\n";
+      cerr << temp << " ("
+           << "exp/nexp = " << exped << "/" << nonexped << ") "<<beststate_score<<"\n";
+      nonexped = exped = 0;
     }
     cout << initscore << "," << beststate_score << "\n";
     return beststate;
@@ -229,22 +230,37 @@ class SA {
 
 int main() {
   MODEL model;
-  cout << "generating model... " << flush;
+  cerr << "generating model... " << flush;
   generateTestCase(model);
-  cout << "done" << endl;
+  cerr << "done" << endl;
 
   STATE state;
-  cout << "initializing model... " << flush;
+  cerr << "initializing model... " << flush;
   state = init(model);
-  cout << "done" << endl;
+  cerr << "done" << endl;
 
-  SA sa(state, 10, 10000, 0.995, model);
+  cerr<<"=====DIRECTED WEIGHTED GRAPH CODE BEGIN=====\n";
+  cerr<<model.V<<" "<<model.E<<"\n";
+  for(int i=0;i<model.V;i++){
+    for(int j=0;j<model.G.g[i].size();j++){
+      cerr<<i<<" "<<model.G.g[i][j].to<<" "<<model.G.g[i][j].cost<<" ";
+    }
+  }
+  cerr<<"\n";
+  cerr<<"=====DIRECTED WEIGHTED GRAPH CODE END=====\n";
+  cerr<<"=====QUERY BEGIN=====\n";
+  for(auto &i:model.Q){
+    cerr<<i.first<<" -> "<<i.second<<"\n";
+  }
+  cerr<<"=====QUERY END=====\n";
+
+  SA sa(state, 100, 1000, 0.99, model);
 
   cout << fixed << setprecision(32);
   auto ans = sa.simulated_annealing();
   for (int i = 0; i < ans.pathlen.size(); i++) {
-    cout << "carrier#" << i << ":\n";
-    cout << "pathlen: " << ans.pathlen[i] << "\n";
-    cout << "acthist: " << ans.acthist[i] << "\n";
+    cerr << "carrier#" << i << ":\n";
+    cerr << "pathlen: " << ans.pathlen[i] << "\n";
+    cerr << "acthist: " << ans.acthist[i] << "\n";
   }
 }

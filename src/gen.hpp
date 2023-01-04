@@ -4,7 +4,7 @@
 
 using namespace std;
 
-constexpr int V = 1000;  // 頂点数
+constexpr int V = 100;  // 頂点数
 constexpr int T = 1000;  // 最大シミュレート時間
 constexpr int M = 10;    // 運送者数
 constexpr int Q = 100;   // 荷物数
