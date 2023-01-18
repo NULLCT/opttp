@@ -195,6 +195,7 @@ class SA {
   // 焼きなまし法
   STATE simulated_annealing() {
     int64_t initscore = evalScore(state);
+    cerr<<"init: "<<initscore<<"\n";
     int nonexped = 0;
     int exped = 0;
     while (temp > 1.0) {  // 十分冷えるまで
@@ -208,7 +209,7 @@ class SA {
         if (0 < delta) {
           state = newstate;
           nonexped++;
-        } else if (frand() < exp(-delta / temp)) {
+        } else if (frand() < exp(delta / temp)) {
           state = newstate;
           exped++;
         }
@@ -219,11 +220,11 @@ class SA {
         }
       }
       temp *= coolingcoef;
-      cerr << temp << " ("
-           << "exp/nexp = " << exped << "/" << nonexped << ") "<<beststate_score<<"\n";
+      cerr << "\e[2K\e[0E" << temp << " ("
+           << "exp/nexp = " << exped << "/" << nonexped << ") "<<beststate_score;
       nonexped = exped = 0;
     }
-    cout << initscore << "," << beststate_score << "\n";
+    cout << "\n" << initscore << "," << beststate_score << "\n";
     return beststate;
   }
 };
@@ -248,11 +249,6 @@ int main() {
   }
   cerr<<"\n";
   cerr<<"=====DIRECTED WEIGHTED GRAPH CODE END=====\n";
-  cerr<<"=====QUERY BEGIN=====\n";
-  for(auto &i:model.Q){
-    cerr<<i.first<<" -> "<<i.second<<"\n";
-  }
-  cerr<<"=====QUERY END=====\n";
 
   SA sa(state, 100, 1000, 0.99, model);
 
