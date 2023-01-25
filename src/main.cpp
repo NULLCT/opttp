@@ -195,7 +195,7 @@ class SA {
   // 焼きなまし法
   STATE simulated_annealing() {
     int64_t initscore = evalScore(state);
-    cerr<<"init: "<<initscore<<"\n";
+    cerr << "init: " << initscore << "\n";
     int nonexped = 0;
     int exped = 0;
     while (temp > 1.0) {  // 十分冷えるまで
@@ -220,11 +220,12 @@ class SA {
         }
       }
       temp *= coolingcoef;
-      cerr << "\e[2K\e[0E" << temp << " ("
-           << "exp/nexp = " << exped << "/" << nonexped << ") "<<beststate_score;
+      cerr << "\e[2K\e[0E" << left << setw(8) << temp << " ("
+           << "exp/nexp = " << exped << "/" << nonexped << ") " << beststate_score;
       nonexped = exped = 0;
     }
-    cout << "\n" << initscore << "," << beststate_score << "\n";
+    cout << "\n"
+         << initscore << "," << beststate_score << "\n";
     return beststate;
   }
 };
@@ -240,15 +241,24 @@ int main() {
   state = init(model);
   cerr << "done" << endl;
 
-  cerr<<"=====DIRECTED WEIGHTED GRAPH CODE BEGIN=====\n";
-  cerr<<model.V<<" "<<model.E<<"\n";
-  for(int i=0;i<model.V;i++){
-    for(int j=0;j<model.G.g[i].size();j++){
-      cerr<<i<<" "<<model.G.g[i][j].to<<" "<<model.G.g[i][j].cost<<" ";
+  cerr << "=====DIRECTED WEIGHTED GRAPH CODE BEGIN=====\n";
+  cerr << model.V << " " << model.E << "\n";
+  for (int i = 0; i < model.V; i++) {
+    for (int j = 0; j < model.G.g[i].size(); j++) {
+      cerr << i << " " << model.G.g[i][j].to << " " << model.G.g[i][j].cost << " ";
     }
   }
-  cerr<<"\n";
-  cerr<<"=====DIRECTED WEIGHTED GRAPH CODE END=====\n";
+  cerr << "\n";
+  cerr << "=====DIRECTED WEIGHTED GRAPH CODE END=====\n";
+  cerr << "=====QUERY BEGIN(size: " << model.Q.size() << ")=====\n";
+  for (auto &i : model.Q)
+    cout << i.first << " -> " << i.second << "\n";
+  cerr << "=====QUERY END=====\n";
+  cerr << "=====CARRIER BEGIN(size: " << model.M.size() << ")=====\n";
+  for (auto &i : model.M)
+    cout << i << " ";
+  cerr << "\n=====QUERY END=====\n";
+  cerr << "Limit: " << model.T << "\n";
 
   SA sa(state, 100, 1000, 0.99, model);
 

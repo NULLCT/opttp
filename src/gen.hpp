@@ -5,10 +5,10 @@
 using namespace std;
 
 constexpr int V = 100;  // 頂点数
-constexpr int T = 1000;  // 最大シミュレート時間
+constexpr int T = 100;  // 最大シミュレート時間
 constexpr int M = 10;    // 運送者数
-constexpr int Q = 100;   // 荷物数
-constexpr int L = 5;     // パス最大長
+constexpr int Q = 10;   // 荷物数
+constexpr int L = 10;     // パス最大長
 
 void generateTestCase(MODEL &model) {
   random_device rand;
