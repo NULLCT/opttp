@@ -1,17 +1,19 @@
 #pragma once
 
-#include "util.hpp"
+#include <map>
+#include <random>
 
-using namespace std;
+#include "experimental_model.hpp"
+#include "unionfind.hpp"
 
 constexpr int V = 100;  // 頂点数
 constexpr int T = 100;  // 最大シミュレート時間
-constexpr int M = 10;    // 運送者数
+constexpr int M = 10;   // 運送者数
 constexpr int Q = 10;   // 荷物数
-constexpr int L = 10;     // パス最大長
+constexpr int L = 10;   // パス最大長
 
 void generateTestCase(MODEL &model) {
-  random_device rand;
+  std::random_device rand;
   UnionFind uf(V);
 
   model.G.init(V);
@@ -46,7 +48,7 @@ void generateTestCase(MODEL &model) {
   {
     model.M.resize(V);
 
-    map<int, int> mp;
+    std::map<int, int> mp;
     for (int i = 0; i < M; i++)
       mp[rand() % V]++;
 
@@ -63,6 +65,6 @@ void generateTestCase(MODEL &model) {
   }
 
   auto res = model.G.warshallfloyd();
-  model.DIST = res.first;
-  model.NEXT = res.second;
+  model.DIST = res.dist;
+  model.NEXT = res.next;
 }

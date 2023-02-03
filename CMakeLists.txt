@@ -6,4 +6,7 @@ set(CMAKE_CXX_FLAGS "-Ofast -march=native")
 
 add_executable(opttp.out
   src/main.cpp
+  src/directed_graph.cpp
+  src/simulated_annealing.cpp
+  src/unionfind.cpp
   )

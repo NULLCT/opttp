@@ -4,13 +4,23 @@
 #include <iostream>
 #include <map>
 #include <queue>
+#include <set>
 #include <unordered_set>
 #include <vector>
 
+#include "experimental_model.hpp"
 #include "gen.hpp"
-#include "util.hpp"
+#include "simulated_annealing.hpp"
 
 using namespace std;
+
+class Carrier {
+ public:
+  int pos;                                 // Carrierの頂点番号
+  unordered_multiset<int64_t> passengers;  // 頂点passengers[i]に行きたい人たち
+
+  Carrier(int _pos) : pos(_pos) {}
+};
 
 STATE init(const MODEL &model) {
   vector<Carrier> carriers;  // 運送者たち id:i
@@ -116,120 +126,6 @@ STATE byGreedy(const MODEL &model) {
   return res;
 }
 
-// 焼きなまし法
-class SA {
-  STATE state;               // 現在の状態
-  double temp;               // 温度
-  const int repnum;          // 反復回数
-  const double coolingcoef;  // 冷却係数
-  MODEL model;               // モデル
-  STATE beststate;           // 暫定最適状態
-  int64_t beststate_score;   // 暫定最適状態ansを評価関数に通したスコア
-
-  // [0,1]の乱数を返す
-  double frand() {
-    return ((double)rand() / (RAND_MAX));
-  }
-
-  // 評価関数
-  int64_t evalScore(const STATE &state) {
-    int64_t res = 0;                // 評価値
-    set<tuple<int, int, int>> que;  // 時刻 番号 頂点
-    for (int i = 0; i < state.acthist.size(); i++) {
-      int time = 0;
-      for (int j = 0; j < state.acthist[i].size(); j++) {
-        que.insert({time, i, state.acthist[i][j]});
-        if (j + 1 != state.acthist[i].size())
-          time += model.DIST[state.acthist[i][j]][state.acthist[i][j + 1]];
-      }
-    }
-
-    vector<multiset<int64_t>> m(model.V);  // m[x] = y -> 頂点xからyに行きたい
-    for (auto &[x, y] : model.Q)           // 頂点xからyに行きたい
-      m[x].insert(y);                      // 運送物登録
-
-    vector<set<int64_t>> carring(state.acthist.size());  // 各運送者が何を保持しているか
-
-    for (auto &q : que) {
-      auto &[t, n, v] = q;  // 時刻 番号 頂点
-      for (auto &i : m[v])
-        carring[n].insert(i);
-      m[v].clear();
-
-      while (carring[n].find(v) != carring[n].end()) {
-        res += model.T - t;
-        carring[n].erase(v);
-      }
-    }
-    return res;
-  }
-
-  // s-opt法 近傍に行き帰りするパスを追加
-  void modify(STATE &state) {
-    int carriernum = (rand() % state.acthist.size());                              // 何番目の運送者か
-    int posnum = (rand() % state.acthist[carriernum].size());                      // 運送経路履歴の何番目頂点を選ぶか
-    int outdnum = (rand() % model.G.g[state.acthist[carriernum][posnum]].size());  // 何本目の辺を選ぶか
-    int pos = state.acthist[carriernum][posnum];                                   // 運送者がいる頂点番号
-    int nextpos = model.G.g[pos][outdnum].to;                                      // これから行き来する頂点
-
-    state.acthist[carriernum].insert(state.acthist[carriernum].begin() + posnum + 1, nextpos);
-    state.acthist[carriernum].insert(state.acthist[carriernum].begin() + posnum + 2, pos);
-
-    state.pathlen[carriernum] += model.DIST[pos][nextpos] + model.DIST[nextpos][pos];
-
-    while (model.T < state.pathlen[carriernum]) {
-      state.pathlen[carriernum] -= model.DIST[state.acthist[carriernum].end()[-1]][state.acthist[carriernum].end()[-2]];
-      state.acthist[carriernum].pop_back();
-    }
-  }
-
- public:
-  SA(STATE &_state, double _temp, int _repnum, double _coolingcoef, MODEL &_model) : state(_state),              // 状態
-                                                                                     temp(_temp),                // 温度
-                                                                                     repnum(_repnum),            // 試行回数
-                                                                                     coolingcoef(_coolingcoef),  // 冷却係数
-                                                                                     model(_model),              // 運送モデル
-                                                                                     beststate(_state),
-                                                                                     beststate_score(evalScore(_state)) {}
-
-  // 焼きなまし法
-  STATE simulated_annealing() {
-    int64_t initscore = evalScore(state);
-    cerr << "init: " << initscore << "\n";
-    int nonexped = 0;
-    int exped = 0;
-    while (temp > 1.0) {  // 十分冷えるまで
-      for (int i = 0; i < repnum; i++) {
-        STATE newstate = state;
-        modify(newstate);
-        int64_t statescore = evalScore(state);
-        int64_t newstatescore = evalScore(newstate);
-        int64_t delta = newstatescore - statescore;
-
-        if (0 < delta) {
-          state = newstate;
-          nonexped++;
-        } else if (frand() < exp(delta / temp)) {
-          state = newstate;
-          exped++;
-        }
-
-        if (beststate_score < newstatescore) {
-          beststate_score = newstatescore;
-          beststate = newstate;
-        }
-      }
-      temp *= coolingcoef;
-      cerr << "\e[2K\e[0E" << left << setw(8) << temp << " ("
-           << "exp/nexp = " << exped << "/" << nonexped << ") " << beststate_score;
-      nonexped = exped = 0;
-    }
-    cout << "\n"
-         << initscore << "," << beststate_score << "\n";
-    return beststate;
-  }
-};
-
 int main() {
   MODEL model;
   cerr << "generating model... " << flush;
@@ -260,13 +156,16 @@ int main() {
   cerr << "\n=====QUERY END=====\n";
   cerr << "Limit: " << model.T << "\n";
 
-  SA sa(state, 100, 1000, 0.99, model);
+  SA sa(state, 100, 100, 0.99, model);
 
   cout << fixed << setprecision(32);
   auto ans = sa.simulated_annealing();
   for (int i = 0; i < ans.pathlen.size(); i++) {
     cerr << "carrier#" << i << ":\n";
     cerr << "pathlen: " << ans.pathlen[i] << "\n";
-    cerr << "acthist: " << ans.acthist[i] << "\n";
+    cerr << "acthist: ";
+    for(auto &act:ans.acthist[i])
+      cout<<act<<" ";
+    cout<<"\n";
   }
 }
