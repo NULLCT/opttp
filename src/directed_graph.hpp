@@ -3,8 +3,9 @@
 #include <queue>
 #include <vector>
 
+#include "consts.hpp"
+
 class DirectedGraph {
-  const int64_t INF = 1LL << 60;
   int64_t N;
   template <class T>
   bool chmin(T &a, const T &b);

@@ -42,7 +42,7 @@ void test_DirectedGraph() {
 }
 
 TEST_LIST = {
-  {"unionfind test", test_UnionFind},
-  {"directedgraph test", test_DirectedGraph},
+  {"unionfind", test_UnionFind},
+  {"directedgraph", test_DirectedGraph},
   {nullptr, nullptr}
 };

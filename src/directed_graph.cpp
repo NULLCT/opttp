@@ -1,7 +1,5 @@
 #include "directed_graph.hpp"
 
-#include <bits/stdint-intn.h>
-
 template <class T>
 bool DirectedGraph::chmin(T &a, const T &b) {
   if (a > b) {

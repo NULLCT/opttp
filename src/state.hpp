@@ -1,4 +1,7 @@
 #pragma once
+#include <set>
+#include <tuple>
+#include <unordered_set>
 #include <vector>
 
 struct STATE {                                // 状態構造体
