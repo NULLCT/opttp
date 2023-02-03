@@ -3,9 +3,12 @@
  * @brief 運送モデルについての情報を保存します
  */
 #pragma once
+#include <iostream>
 #include <vector>
 
+#include "carrier.hpp"
 #include "directed_graph.hpp"
+#include "state.hpp"
 
 struct MODEL {                                 // 運送モデル
   int64_t V;                                   // 頂点数
@@ -17,4 +20,6 @@ struct MODEL {                                 // 運送モデル
   std::vector<std::pair<int64_t, int64_t>> Q;  // クエリ
   std::vector<std::vector<int64_t>> DIST;      // 頂点間距離
   std::vector<std::vector<int64_t>> NEXT;      // ある頂点に行くため次どこに行けばいいか
+  STATE generateState();
+  friend std::istream &operator>>(std::istream &is, MODEL &model);
 };

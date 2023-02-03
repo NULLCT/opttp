@@ -16,32 +16,6 @@
 
 using namespace std;
 
-STATE init(const MODEL &model) {
-  std::vector<Carrier> carriers;  // 運送者たち id:i
-  for (size_t i = 0; i < model.M.size(); i++)
-    for (int64_t j = 0; j < model.M[i]; j++)
-      carriers.emplace_back(Carrier(i));  // 運送者情報をcarriersに詰める
-
-  STATE res;  // SA法用状態保持
-  res.acthist.resize(carriers.size());
-  res.pathlen.resize(carriers.size());
-
-  for (int i = 0; i < carriers.size(); i++) {
-    res.acthist[i].push_back(carriers[i].pos);
-    while (true) {
-      int nextpos = rand() % model.G.g[res.acthist[i].back()].size();
-      if (res.pathlen[i] + model.G.g[res.acthist[i].back()][nextpos].cost <= model.T) {
-        res.pathlen[i] += model.G.g[res.acthist[i].back()][nextpos].cost;
-        res.acthist[i].push_back(model.G.g[res.acthist[i].back()][nextpos].to);
-      } else {
-        break;
-      }
-    }
-  }
-
-  return res;
-}
-
 int main() {
   MODEL model;
   cerr << "generating model... " << flush;
@@ -50,7 +24,7 @@ int main() {
 
   STATE state;
   cerr << "initializing model... " << flush;
-  state = init(model);
+  state = model.generateState();
   cerr << "done" << endl;
 
   cerr << "=====DIRECTED WEIGHTED GRAPH CODE BEGIN=====\n";

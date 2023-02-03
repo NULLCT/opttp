@@ -59,7 +59,7 @@ STATE SA::simulated_annealing() {
   std::cerr << "init: " << initscore << "\n";
   int nonexped = 0;
   int exped = 0;
-  while (temp > 0.1) {  // 十分冷えるまで
+  while (temp > 1) {  // 十分冷えるまで
     for (int i = 0; i < repnum; i++) {
       STATE newstate = state;
       modify(newstate);

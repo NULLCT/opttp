@@ -1,7 +1,11 @@
+#include <sstream>
 #include <stdexcept>
 
 #include "acutest.h"
 #include "directed_graph.hpp"
+#include "experimental_model.hpp"
+#include "simulated_annealing.hpp"
+#include "state.hpp"
 #include "unionfind.hpp"
 
 void test_UnionFind() {
@@ -41,8 +45,32 @@ void test_DirectedGraph() {
   }
 }
 
+void test_SimulatedAnnealing() {
+  MODEL model;
+  std::string s =
+      "5 8\n\
+0 1 1\n\
+1 2 1\n\
+2 3 1\n\
+3 4 1\n\
+4 3 1\n\
+3 2 1\n\
+2 1 1\n\
+1 0 1\n\
+100\n\
+1 0 0 0 0\n\
+1\n\
+0 4";
+  std::stringbuf strbuf(s.c_str());
+  std::istream ist(&strbuf);
+  ist >> model;
+  STATE state = model.generateState();
+  SA sa(state,100,100,0.99,model);
+  auto res = sa.simulated_annealing();
+}
+
 TEST_LIST = {
-  {"unionfind", test_UnionFind},
-  {"directedgraph", test_DirectedGraph},
-  {nullptr, nullptr}
-};
+    {"unionfind", test_UnionFind},
+    {"directedgraph", test_DirectedGraph},
+    {"simulatedannealing", test_SimulatedAnnealing},
+    {nullptr, nullptr}};
