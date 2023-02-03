@@ -1,3 +1,7 @@
+/**
+ * @file directed_graph.hpp
+ * @brief 有向重み付きグラフを保持し、ワーシャルフロイドなどのアルゴリズムを提供します
+ */
 #pragma once
 
 #include <queue>

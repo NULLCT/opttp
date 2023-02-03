@@ -1,3 +1,7 @@
+/**
+ * @file simulated_annealing.hpp
+ * @brief 焼きなまし法を適応します
+ */
 #pragma once
 #include <cmath>
 #include <iomanip>

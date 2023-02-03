@@ -1,3 +1,7 @@
+/**
+ * @file experimental_model.hpp
+ * @brief 運送モデルについての情報を保存します
+ */
 #pragma once
 #include <vector>
 

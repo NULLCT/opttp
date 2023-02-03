@@ -1,3 +1,7 @@
+/**
+ * @file carrier.hpp
+ * @brief 運送者についての情報を保存します
+ */
 #pragma once
 
 #include <unordered_set>

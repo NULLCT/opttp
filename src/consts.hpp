@@ -1,3 +1,7 @@
+/**
+ * @file consts.hpp
+ * @brief 運送モデル作成に関係する定数を決めています
+ */
 #pragma once
 
 constexpr long long INF = 1LL << 60;

@@ -1,3 +1,7 @@
+/**
+ * @file generate_testcase.hpp
+ * @brief consts.hppから運送モデルを作ります
+ */
 #pragma once
 
 #include <map>

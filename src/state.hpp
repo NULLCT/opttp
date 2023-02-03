@@ -1,3 +1,7 @@
+/**
+ * @file simulated_annealing.hpp
+ * @brief 焼きなまし法での状態を保存します
+ */
 #pragma once
 #include <set>
 #include <tuple>

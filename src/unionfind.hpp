@@ -1,3 +1,7 @@
+/**
+ * @file unionfind.hpp
+ * @brief 素集合データ構造を提供します
+ */
 #pragma once
 #include <vector>
 
