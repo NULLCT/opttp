@@ -10,3 +10,13 @@ add_executable(opttp.out
   src/simulated_annealing.cpp
   src/unionfind.cpp
   )
+
+enable_testing()
+add_executable(test_submodules
+  src/test.cpp
+  src/directed_graph.cpp
+  src/simulated_annealing.cpp
+  src/unionfind.cpp
+)
+
+add_test(NAME test_sub COMMAND test_submodules)
