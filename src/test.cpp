@@ -67,6 +67,9 @@ void test_SimulatedAnnealing() {
   STATE state = model.generateState();
   SA sa(state,100,100,0.99,model);
   auto res = sa.simulated_annealing();
+  TEST_CHECK(sa.evalScore(res) == 96);
+  for(int i=0;i<res.acthist[0].size()-1;i++)
+    TEST_CHECK(abs(res.acthist[0][i] - res.acthist[0][i+1]) == 1);
 }
 
 TEST_LIST = {
